@@ -25,6 +25,10 @@ local CONFIG = {
     hud = {
         showFps         = true,  -- widget FPS + ping (/rpuifps untuk toggle)
         fpsPosition     = "top-left",
+        fpsX            = nil,
+        fpsY            = nil,
+        statsX          = nil,
+        statsY          = nil,
         statsBottomFrac = 0.56,  -- batas bawah panel status (0-1 tinggi layar); radar GTA ada di bawahnya
         needsTimeout    = 90,    -- detik; data lapar/haus dianggap basi kalau server berhenti mengirim
     },
@@ -56,6 +60,11 @@ do
                 and (value == "top-left" or value == "top-right"
                     or value == "bottom-left" or value == "bottom-right") then
                 CONFIG.hud.fpsPosition = value
+            elseif key == "fpsX" or key == "fpsY" or key == "statsX" or key == "statsY" then
+                local position = tonumber(value)
+                if position and position >= 0 and position <= 1 then
+                    CONFIG.hud[key] = position
+                end
             end
         end
         file:close()
@@ -1002,27 +1011,32 @@ local function saveHudSettings()
     local okDir, dirErr = pcall(createDirectory, getWorkingDirectory() .. "\\config")
     if not okDir then
         hudSettingsStatus = "Pengaturan HUD gagal disimpan: " .. tostring(dirErr)
-        return
+        return false
     end
     local file, err = io.open(hudSettingsPath, "w")
     if not file then
         hudSettingsStatus = "Pengaturan HUD gagal disimpan: " .. tostring(err)
-        return
+        return false
     end
     local wrote, writeErr = file:write(
         "showFps=", CONFIG.hud.showFps and "true" or "false", "\n",
-        "fpsPosition=", CONFIG.hud.fpsPosition, "\n")
+        "fpsPosition=", CONFIG.hud.fpsPosition, "\n",
+        "fpsX=", CONFIG.hud.fpsX and string.format("%.5f", CONFIG.hud.fpsX) or "", "\n",
+        "fpsY=", CONFIG.hud.fpsY and string.format("%.5f", CONFIG.hud.fpsY) or "", "\n",
+        "statsX=", CONFIG.hud.statsX and string.format("%.5f", CONFIG.hud.statsX) or "", "\n",
+        "statsY=", CONFIG.hud.statsY and string.format("%.5f", CONFIG.hud.statsY) or "", "\n")
     if not wrote then
         file:close()
         hudSettingsStatus = "Pengaturan HUD gagal disimpan: " .. tostring(writeErr)
-        return
+        return false
     end
     local closed, closeErr = file:close()
     if not closed then
         hudSettingsStatus = "Pengaturan HUD gagal disimpan: " .. tostring(closeErr)
-        return
+        return false
     end
-    hudSettingsStatus = "Pengaturan FPS dan ping berhasil disimpan."
+    hudSettingsStatus = "Pengaturan posisi HUD berhasil disimpan."
+    return true
 end
 
 local function drawAppearance(w)
@@ -1058,28 +1072,36 @@ local function drawAppearance(w)
 
     sectionTitle("WIDGET FPS & PING")
     imgui.TextWrapped("Atur visibilitas dan posisi panel FPS, ping, serta jam. Perubahan langsung terlihat.")
+    imgui.TextWrapped("Gunakan /rpuihudedit untuk menggeser panel HUD dengan mouse. Posisi tersimpan saat mouse dilepas.")
+    if imgui.Button("MODE GESER HUD##hud_edit_toggle", V2(w, 38)) then
+        CONFIG.hud.toggleEdit()
+    end
     if imgui.Checkbox("Tampilkan FPS dan ping##hud_fps_visible", fpsEnabled) then
         CONFIG.hud.showFps = fpsEnabled[0]
     end
 
     local buttonW = (w - 10) / 2
-    if imgui.Button((CONFIG.hud.fpsPosition == "top-left" and "KIRI ATAS (AKTIF)" or "KIRI ATAS")
+    if imgui.Button((CONFIG.hud.fpsX == nil and CONFIG.hud.fpsPosition == "top-left" and "KIRI ATAS (AKTIF)" or "KIRI ATAS")
         .. "##fps_top_left", V2(buttonW, 36)) then
         CONFIG.hud.fpsPosition = "top-left"
+        CONFIG.hud.fpsX, CONFIG.hud.fpsY = nil, nil
     end
     imgui.SameLine(0, 10)
-    if imgui.Button((CONFIG.hud.fpsPosition == "top-right" and "KANAN ATAS (AKTIF)" or "KANAN ATAS")
+    if imgui.Button((CONFIG.hud.fpsX == nil and CONFIG.hud.fpsPosition == "top-right" and "KANAN ATAS (AKTIF)" or "KANAN ATAS")
         .. "##fps_top_right", V2(buttonW, 36)) then
         CONFIG.hud.fpsPosition = "top-right"
+        CONFIG.hud.fpsX, CONFIG.hud.fpsY = nil, nil
     end
-    if imgui.Button((CONFIG.hud.fpsPosition == "bottom-left" and "KIRI BAWAH (AKTIF)" or "KIRI BAWAH")
+    if imgui.Button((CONFIG.hud.fpsX == nil and CONFIG.hud.fpsPosition == "bottom-left" and "KIRI BAWAH (AKTIF)" or "KIRI BAWAH")
         .. "##fps_bottom_left", V2(buttonW, 36)) then
         CONFIG.hud.fpsPosition = "bottom-left"
+        CONFIG.hud.fpsX, CONFIG.hud.fpsY = nil, nil
     end
     imgui.SameLine(0, 10)
-    if imgui.Button((CONFIG.hud.fpsPosition == "bottom-right" and "KANAN BAWAH (AKTIF)" or "KANAN BAWAH")
+    if imgui.Button((CONFIG.hud.fpsX == nil and CONFIG.hud.fpsPosition == "bottom-right" and "KANAN BAWAH (AKTIF)" or "KANAN BAWAH")
         .. "##fps_bottom_right", V2(buttonW, 36)) then
         CONFIG.hud.fpsPosition = "bottom-right"
+        CONFIG.hud.fpsX, CONFIG.hud.fpsY = nil, nil
     end
     if imgui.Button("SIMPAN PENGATURAN HUD##hud_settings_save", V2(w, 38)) then
         saveHudSettings()
@@ -1699,6 +1721,53 @@ end
 -- ===== widget FPS + PING (kiri atas) =====
 local FPS_H = 46
 local HUD_MUTED = nil
+CONFIG.hud.editMode = false
+CONFIG.hud.drag = { target = nil, offsetX = 0, offsetY = 0 }
+
+CONFIG.hud.clampPosition = function(x, y, w, h, display)
+    return math.max(0, math.min(display.x - w, x)),
+        math.max(0, math.min(display.y - h, y))
+end
+
+CONFIG.hud.position = function(xValue, yValue, defaultX, defaultY, w, h, display)
+    if xValue == nil or yValue == nil then return defaultX, defaultY end
+    local maxX, maxY = math.max(0, display.x - w), math.max(0, display.y - h)
+    return maxX * xValue, maxY * yValue
+end
+
+CONFIG.hud.updateDrag = function(target, x, y, w, h, display)
+    if not CONFIG.hud.editMode then return x, y end
+
+    local mouse = imgui.GetMousePos()
+    if CONFIG.hud.drag.target == nil and imgui.IsMouseClicked(0)
+        and mouse.x >= x and mouse.x <= x + w
+        and mouse.y >= y and mouse.y <= y + h then
+        CONFIG.hud.drag.target = target
+        CONFIG.hud.drag.offsetX, CONFIG.hud.drag.offsetY = mouse.x - x, mouse.y - y
+    end
+
+    if CONFIG.hud.drag.target == target then
+        if imgui.IsMouseDown(0) or imgui.IsMouseReleased(0) then
+            x, y = CONFIG.hud.clampPosition(mouse.x - CONFIG.hud.drag.offsetX,
+                mouse.y - CONFIG.hud.drag.offsetY, w, h, display)
+            local maxX, maxY = math.max(0, display.x - w), math.max(0, display.y - h)
+            if target == "fps" then
+                CONFIG.hud.fpsX = maxX > 0 and x / maxX or 0
+                CONFIG.hud.fpsY = maxY > 0 and y / maxY or 0
+            else
+                CONFIG.hud.statsX = maxX > 0 and x / maxX or 0
+                CONFIG.hud.statsY = maxY > 0 and y / maxY or 0
+            end
+        end
+        if imgui.IsMouseReleased(0) then
+            CONFIG.hud.drag.target = nil
+            if not saveHudSettings() then
+                sampAddChatMessage("[PekanBaru UI] " .. hudSettingsStatus, 0xFFFF6A6A)
+            end
+        end
+    end
+    return x, y
+end
 
 local function fpsHudWidth()
     local tagW = imgui.CalcTextSize(CONFIG.shortTag).x + 18
@@ -1784,14 +1853,16 @@ local fpsFrame = imgui.OnFrame(
         local io = imgui.GetIO()
         local dt, ds = io.DeltaTime, io.DisplaySize
         local flags = imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoResize
-            + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoInputs
-            + imgui.WindowFlags.NoBackground
+            + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoBackground
+        if not CONFIG.hud.editMode then flags = flags + imgui.WindowFlags.NoInputs end
         local margin = 4
         local width = fpsHudWidth()
-        local x = (CONFIG.hud.fpsPosition == "top-right" or CONFIG.hud.fpsPosition == "bottom-right")
+        local defaultX = (CONFIG.hud.fpsPosition == "top-right" or CONFIG.hud.fpsPosition == "bottom-right")
             and math.max(0, ds.x - width - margin) or margin
-        local y = (CONFIG.hud.fpsPosition == "bottom-left" or CONFIG.hud.fpsPosition == "bottom-right")
+        local defaultY = (CONFIG.hud.fpsPosition == "bottom-left" or CONFIG.hud.fpsPosition == "bottom-right")
             and math.max(0, ds.y - FPS_H - margin) or margin
+        local x, y = CONFIG.hud.position(CONFIG.hud.fpsX, CONFIG.hud.fpsY, defaultX, defaultY, width, FPS_H, ds)
+        x, y = CONFIG.hud.updateDrag("fps", x, y, width, FPS_H, ds)
         imgui.SetNextWindowPos(V2(x, y), imgui.Cond.Always)
         imgui.SetNextWindowSize(V2(width, FPS_H), imgui.Cond.Always)
         imgui.Begin("##PBRP_fps_hud", nil, flags)
@@ -1801,7 +1872,7 @@ local fpsFrame = imgui.OnFrame(
         if not ok then logUiError("fps hud", err) end
     end
 )
-fpsFrame.HideCursor = true
+fpsFrame.HideCursor = not CONFIG.hud.editMode
 
 -- ===== panel status karakter (kiri) =====
 local STATS_W = 286
@@ -1918,11 +1989,13 @@ hudFrame = imgui.OnFrame(
         local dt, ds = io.DeltaTime, io.DisplaySize
         local h, needs, footer = statsLayout()
         local flags = imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoResize
-            + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoInputs
-            + imgui.WindowFlags.NoBackground
+            + imgui.WindowFlags.NoSavedSettings + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoBackground
+        if not CONFIG.hud.editMode then flags = flags + imgui.WindowFlags.NoInputs end
 
-        local y = math.max(80, ds.y * CONFIG.hud.statsBottomFrac - h)
-        imgui.SetNextWindowPos(V2(16, y), imgui.Cond.Always)
+        local defaultY = math.max(80, ds.y * CONFIG.hud.statsBottomFrac - h)
+        local x, y = CONFIG.hud.position(CONFIG.hud.statsX, CONFIG.hud.statsY, 16, defaultY, STATS_W, h, ds)
+        x, y = CONFIG.hud.updateDrag("stats", x, y, STATS_W, h, ds)
+        imgui.SetNextWindowPos(V2(x, y), imgui.Cond.Always)
         imgui.SetNextWindowSize(V2(STATS_W, h), imgui.Cond.Always)
         imgui.Begin("##PBRP_status_hud", nil, flags)
         local dl, p = imgui.GetWindowDrawList(), imgui.GetWindowPos()
@@ -1931,7 +2004,19 @@ hudFrame = imgui.OnFrame(
         if not ok then logUiError("hud", err) end
     end
 )
-hudFrame.HideCursor = true
+hudFrame.HideCursor = not CONFIG.hud.editMode
+
+CONFIG.hud.toggleEdit = function()
+    CONFIG.hud.editMode = not CONFIG.hud.editMode
+    CONFIG.hud.drag.target = nil
+    fpsFrame.HideCursor = not CONFIG.hud.editMode
+    hudFrame.HideCursor = not CONFIG.hud.editMode
+    if CONFIG.hud.editMode then
+        sampAddChatMessage("[PekanBaru UI] Mode geser aktif: tarik panel HUD dengan mouse, lepas untuk menyimpan. Ketik /rpuihudedit untuk selesai.", 0xFFD4AF37)
+    else
+        sampAddChatMessage("[PekanBaru UI] Mode geser HUD dinonaktifkan.", 0xFFD4AF37)
+    end
+end
 
 -- petunjuk tombol di sisi kanan (disembunyikan saat UI lain terbuka)
 local function keycap(dl, x, y, label)
@@ -2602,6 +2687,7 @@ function main()
     sampRegisterChatCommand("rpuihud", function()
         hudOpen[0] = not hudOpen[0]
     end)
+    sampRegisterChatCommand("rpuihudedit", CONFIG.hud.toggleEdit)
     sampRegisterChatCommand("rpuifps", function()
         CONFIG.hud.showFps = not CONFIG.hud.showFps
         fpsEnabled[0] = CONFIG.hud.showFps

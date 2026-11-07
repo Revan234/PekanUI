@@ -142,6 +142,7 @@ return function(imgui, V2, isPlayerUiReady)
         imgui.BeginChild("##PBRP_mechanic_service_cards", V2(size.x - 36, size.y - 174), false,
             imgui.WindowFlags.NoBackground)
 
+        local cardDrawList = imgui.GetWindowDrawList()
         local spacing, cardHeight = 12, 76
         local available = imgui.GetContentRegionAvail().x
         local columns = available >= 660 and 3 or 2
@@ -159,10 +160,10 @@ return function(imgui, V2, isPlayerUiReady)
             local cardMax = imgui.GetItemRectMax()
             local hovered = imgui.IsItemHovered()
             local accent = hovered and P.redHover or P.red
-            dl:AddRectFilled(V2(cardPos.x + 1, cardPos.y + 9),
+            cardDrawList:AddRectFilled(V2(cardPos.x + 1, cardPos.y + 9),
                 V2(cardPos.x + 4, cardMax.y - 9), colorU32(accent), 2)
-            dl:AddText(V2(cardPos.x + 14, cardPos.y + 13), colorU32(P.text), item.name)
-            dl:AddText(V2(cardPos.x + 14, cardPos.y + 40), colorU32(P.gold),
+            cardDrawList:AddText(V2(cardPos.x + 14, cardPos.y + 13), colorU32(P.text), item.name)
+            cardDrawList:AddText(V2(cardPos.x + 14, cardPos.y + 40), colorU32(P.gold),
                 item.requirement ~= "" and item.requirement or "Layanan mekanik")
             imgui.PopStyleVar()
             imgui.PopStyleColor(4)
@@ -188,7 +189,7 @@ return function(imgui, V2, isPlayerUiReady)
     frame = imgui.OnFrame(
         function() return open and isSampAvailable() and isPlayerUiReady() end,
         draw)
-    frame.LockPlayer = true
+    frame.LockPlayer = false
     frame.HideCursor = true
 
     return {
