@@ -79,6 +79,63 @@ local updateStatus = {
     currentBytes = 0,
     finishedAt = 0,
 }
+local updateLog = {}
+local updateLogPath = scriptDirectory and (scriptDirectory .. "\\.pbrp-update-log") or nil
+
+local function cleanUpdateLogField(value)
+    return tostring(value or ""):gsub("[\r\n\t]", " ")
+end
+
+local function loadUpdateLog()
+    if not updateLogPath then return end
+    local file = io.open(updateLogPath, "rb")
+    if not file then return end
+    for line in file:lines() do
+        local timestamp, title, detail = line:match("^([^\t]*)\t([^\t]*)\t(.*)$")
+        if timestamp and title then
+            updateLog[#updateLog + 1] = {
+                timestamp = timestamp,
+                title = title,
+                detail = detail or "",
+            }
+        end
+    end
+    file:close()
+    while #updateLog > 8 do table.remove(updateLog, 1) end
+end
+
+local function recordUpdateLog(title, detail)
+    updateLog[#updateLog + 1] = {
+        timestamp = os.date("%Y-%m-%d %H:%M:%S"),
+        title = cleanUpdateLogField(title),
+        detail = cleanUpdateLogField(detail),
+    }
+    while #updateLog > 8 do table.remove(updateLog, 1) end
+
+    if not updateLogPath then
+        print("[PBRP Updater] Lokasi file log update tidak tersedia.")
+        return
+    end
+    local file, openError = io.open(updateLogPath, "wb")
+    if not file then
+        print("[PBRP Updater] Gagal menyimpan log update: " .. tostring(openError))
+        return
+    end
+    for _, entry in ipairs(updateLog) do
+        local wrote, writeError = file:write(entry.timestamp, "\t", entry.title, "\t", entry.detail, "\n")
+        if not wrote then
+            file:close()
+            print("[PBRP Updater] Gagal menulis log update: " .. tostring(writeError))
+            return
+        end
+    end
+    local closed, closeError = file:close()
+    if not closed then
+        print("[PBRP Updater] Gagal menutup log update: " .. tostring(closeError))
+    end
+end
+
+loadUpdateLog()
 
 if scriptDirectory then
     local bundledLibrary = scriptDirectory .. "\\beta tester ui\\SanAndreasOnline\\lib"
@@ -889,6 +946,23 @@ local function drawHome(w)
     imgui.Spacing()
     imgui.TextColored(imgui.ImVec4(0.55, 0.78, 0.96, 1.0), "PETUNJUK")
     note("Tekan F2 untuk membuka menu utama, atau M untuk radial (tekan 1-0 untuk memilih cepat). Inventori dan handphone tersedia dari radial.")
+
+    sectionTitle("LOG UPDATE PEKANBARU UI")
+    if updateStatus.active then
+        imgui.TextColored(imgui.ImVec4(0.96, 0.70, 0.30, 1), "Sedang berjalan: " .. updateStatus.title)
+        if updateStatus.detail ~= "" then imgui.TextWrapped(updateStatus.detail) end
+    end
+    if #updateLog == 0 then
+        note("Belum ada riwayat pemeriksaan atau update.")
+    else
+        for index = #updateLog, 1, -1 do
+            local entry = updateLog[index]
+            imgui.Separator()
+            imgui.TextColored(imgui.ImVec4(0.68, 0.75, 0.88, 1), entry.timestamp .. "  |  " .. entry.title)
+            if entry.detail ~= "" then imgui.TextWrapped(entry.detail) end
+        end
+    end
+
     if #loadErrors > 0 then
         sectionTitle("MODUL GAGAL DIMUAT")
         imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.98, 0.45, 0.35, 1.0))
@@ -2061,6 +2135,7 @@ local function finishUpdaterStatus(title, detail)
     updateStatus.detail = detail or ""
     updateStatus.active = false
     updateStatus.finishedAt = os.clock()
+    recordUpdateLog(title, detail)
 end
 
 local function updaterFileExists(path)
