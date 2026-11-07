@@ -15,8 +15,8 @@ local CONFIG = {
     logoFile   = "uijtrp\\assets\\pbrp-logo.png",
 
     -- Link inti server (ganti dengan link aslimu)
-    discordUrl = "https://discord.gg/GANTI-LINK-DISCORD",
-    websiteUrl = "https://GANTI-LINK-WEBSITE.com",
+    discordUrl = "https://discord.gg/CacxpYbhCw",
+    websiteUrl = "https://web.pekanbaruu.my.id",
 
     -- Warna aksen (R, G, B  0.0 - 1.0)
     accent = { 0.86, 0.12, 0.16 },
