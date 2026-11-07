@@ -14,32 +14,28 @@ return function(imgui, V2, color, sendChat, inventoryUI, isPlayerUiReady)
 
     local function getPlayerTarget()
         local px, py, pz = getCharCoordinates(PLAYER_PED)
-        local localId = sampGetLocalPlayerId()
-        local maxId = sampGetMaxPlayerId(true)
         local closest, closestDistance
 
-        for playerId = 0, maxId do
-            if playerId ~= localId then
-                local ok, ped = sampGetCharHandleBySampPlayerId(playerId)
-                if ok and doesCharExist(ped) then
-                    local x, y, z = getCharCoordinates(ped)
-                    local distance = distanceBetween(px, py, pz, x, y, z)
-                    if distance <= 2.5 and (not closestDistance or distance < closestDistance) then
-                        local screenX, screenY = convert3DCoordsToScreen(x, y, z + 1.0)
-                        if screenX and screenY then
-                            closest = {
-                                kind = "player",
-                                id = playerId,
-                                name = sampGetPlayerNickname(playerId),
-                                x = x,
-                                y = y,
-                                z = z,
-                                screenX = screenX,
-                                screenY = screenY,
-                                distance = distance,
-                            }
-                            closestDistance = distance
-                        end
+        for playerId = 0, 999 do
+            local ok, ped = sampGetCharHandleBySampPlayerId(playerId)
+            if ok and ped ~= PLAYER_PED and doesCharExist(ped) then
+                local x, y, z = getCharCoordinates(ped)
+                local distance = distanceBetween(px, py, pz, x, y, z)
+                if distance <= 2.5 and (not closestDistance or distance < closestDistance) then
+                    local screenX, screenY = convert3DCoordsToScreen(x, y, z + 1.0)
+                    if screenX and screenY then
+                        closest = {
+                            kind = "player",
+                            id = playerId,
+                            name = sampGetPlayerNickname(playerId),
+                            x = x,
+                            y = y,
+                            z = z,
+                            screenX = screenX,
+                            screenY = screenY,
+                            distance = distance,
+                        }
+                        closestDistance = distance
                     end
                 end
             end
