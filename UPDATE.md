@@ -6,10 +6,11 @@ selama tetap terhubung. Port tidak diperiksa. Server lain tidak memicu unduhan.
 
 Untuk merilis perubahan:
 
-1. Unggah `uijtrp.lua`, folder `uijtrp` (file Lua yang ingin diperbarui), dan
-   `update-manifest.txt` ke root repo GitHub.
-2. Pastikan setiap file Lua yang ingin diunduh tercantum satu per baris di
-   `update-manifest.txt`, menggunakan path relatif dari root repo.
+1. Unggah `uijtrp.lua`, folder `uijtrp` (modul dan aset yang ingin diperbarui),
+   dan `update-manifest.txt` ke root repo GitHub.
+2. Cantumkan setiap file satu per baris di `update-manifest.txt`, menggunakan
+   path relatif dari root repo. Updater menerima file Lua, gambar PNG/JPG/JPEG/
+   WEBP/BMP, dan audio WAV/MP3/OGG di dalam folder `uijtrp`.
 3. Commit perubahan ke branch `main`.
 4. Saat pengguna masuk/tersambung kembali ke server PekanBaru dan setiap
    pemeriksaan berkala, updater mengambil commit terbaru. Jika ada perubahan,
@@ -18,10 +19,14 @@ Untuk merilis perubahan:
    selesai, dan ukuran unduhan aktif. Script dimuat ulang otomatis setelah
    update berhasil.
 
-Updater hanya mengizinkan `uijtrp.lua` dan file Lua langsung di dalam folder
-`uijtrp`. Jika koneksi atau validasi gagal, file yang sedang dipakai tidak
-diganti. Perubahan baru di luar file yang terdaftar pada manifest tidak akan
-diunduh. Jika repo privat, unduhan publik tidak akan berhasil.
+Updater hanya mengizinkan `uijtrp.lua` dan file dengan ekstensi yang didukung
+di dalam folder `uijtrp`; path absolut dan traversal folder ditolak. File Lua
+divalidasi sintaksnya, sedangkan aset divalidasi agar unduhannya tidak kosong.
+Semua file yang terdaftar pada manifest diunduh saat ada commit baru, jadi
+manifest aset lengkap dapat mengunduh ulang sekitar 24 MB per rilis. Cantumkan
+hanya aset yang memang ingin dirilis lewat updater. Jika koneksi atau validasi
+gagal, file yang sedang dipakai tidak diganti. Jika repo privat, unduhan publik
+tidak akan berhasil.
 
 Menu F2 pada halaman Beranda menampilkan status updater dan hingga delapan
 hasil pemeriksaan atau update terakhir. Riwayat disimpan secara lokal di file

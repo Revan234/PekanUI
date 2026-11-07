@@ -2224,6 +2224,49 @@ local function rollbackUpdaterFiles(applied)
     end
 end
 
+local function isAllowedUpdaterPath(relativePath)
+    if relativePath == "uijtrp.lua" then return true end
+    if relativePath:sub(1, 6) ~= "uijtrp/" or relativePath:find("\\", 1, true)
+        or relativePath:find("//", 1, true) or relativePath:find(":", 1, true)
+        or not relativePath:match("^[%w_%.%-/]+$") then
+        return false
+    end
+
+    local segments = {}
+    for segment in relativePath:gmatch("[^/]+") do
+        if segment == "." or segment == ".." or segment:sub(1, 1) == "." then
+            return false
+        end
+        segments[#segments + 1] = segment
+    end
+    if #segments < 2 or segments[1] ~= "uijtrp" then return false end
+
+    local extension = segments[#segments]:match("%.([%w]+)$")
+    if not extension then return false end
+    extension = extension:lower()
+    return extension == "lua" or extension == "png" or extension == "jpg"
+        or extension == "jpeg" or extension == "webp" or extension == "bmp"
+        or extension == "wav" or extension == "mp3" or extension == "ogg"
+end
+
+local function ensureUpdaterParentDirectory(relativePath)
+    local current = scriptDirectory
+    local segments = {}
+    for segment in relativePath:gmatch("[^/]+") do
+        segments[#segments + 1] = segment
+    end
+    for index = 1, #segments - 1 do
+        current = current .. "\\" .. segments[index]
+        if not doesDirectoryExist(current) then
+            local okCreate, createError = pcall(createDirectory, current)
+            if not okCreate or not doesDirectoryExist(current) then
+                return false, tostring(createError or ("tidak bisa membuat " .. current))
+            end
+        end
+    end
+    return true
+end
+
 local function checkForGithubUpdate()
     if not scriptDirectory then
         updaterNotice("Lokasi script tidak dapat ditentukan; update dibatalkan.")
@@ -2289,9 +2332,7 @@ local function checkForGithubUpdate()
     for line in manifest:gmatch("[^\r\n]+") do
         local relativePath = line:match("^%s*(.-)%s*$")
         if relativePath ~= "" and relativePath:sub(1, 1) ~= "#" then
-            local allowed = relativePath == "uijtrp.lua"
-                or relativePath:match("^uijtrp/[%w_%-]+%.lua$")
-            if not allowed then
+            if not isAllowedUpdaterPath(relativePath) then
                 updaterNotice("Path di manifest ditolak: " .. relativePath)
                 finishUpdaterStatus("Update dibatalkan", "Path manifest ditolak: " .. relativePath)
                 return
@@ -2319,6 +2360,14 @@ local function checkForGithubUpdate()
         local backup = destination .. ".pbrp-update.bak"
         local sourceUrl = prefix .. commit .. "/" .. relativePath
 
+        local directoryReady, directoryError = ensureUpdaterParentDirectory(relativePath)
+        if not directoryReady then
+            removeUpdaterFiles(stagedPaths)
+            updaterNotice("Folder tujuan gagal disiapkan untuk " .. relativePath .. ": " .. directoryError)
+            finishUpdaterStatus("Pemasangan gagal", relativePath .. ": " .. directoryError)
+            return
+        end
+
         updateStatus.currentBytes = 0
         setUpdaterStatus("Mengunduh file", string.format("%d/%d  %s", index, #files, relativePath))
         if not downloadSoundPlayed then
@@ -2335,14 +2384,16 @@ local function checkForGithubUpdate()
             return
         end
 
-        setUpdaterStatus("Memvalidasi Lua", string.format("%d/%d  %s", index, #files, relativePath))
-        local compiled, compileError = loadfile(temporary)
-        if not compiled then
-            removeUpdaterFiles(stagedPaths)
-            os.remove(temporary)
-            updaterNotice("Syntax Lua tidak valid pada " .. relativePath .. ": " .. tostring(compileError))
-            finishUpdaterStatus("Validasi gagal", relativePath .. ": sintaks Lua tidak valid.")
-            return
+        if relativePath:lower():match("%.lua$") then
+            setUpdaterStatus("Memvalidasi Lua", string.format("%d/%d  %s", index, #files, relativePath))
+            local compiled, compileError = loadfile(temporary)
+            if not compiled then
+                removeUpdaterFiles(stagedPaths)
+                os.remove(temporary)
+                updaterNotice("Syntax Lua tidak valid pada " .. relativePath .. ": " .. tostring(compileError))
+                finishUpdaterStatus("Validasi gagal", relativePath .. ": sintaks Lua tidak valid.")
+                return
+            end
         end
 
         staged[#staged + 1] = {
@@ -2356,7 +2407,7 @@ local function checkForGithubUpdate()
         updateStatus.completed = index
     end
 
-    setUpdaterStatus("Memasang update", string.format("%d file Lua", #files))
+    setUpdaterStatus("Memasang update", string.format("%d file", #files))
     local stateTemporary = statePath .. ".tmp"
     local stateFile, stateError = io.open(stateTemporary, "wb")
     if not stateFile then
@@ -2419,7 +2470,7 @@ local function checkForGithubUpdate()
         if item.hadOriginal then os.remove(item.backup) end
     end
     updaterNotice("Update GitHub berhasil. Script akan dimuat ulang.")
-    finishUpdaterStatus("Update selesai", string.format("%d file Lua terpasang. Memuat ulang...", #files))
+    finishUpdaterStatus("Update selesai", string.format("%d file terpasang. Memuat ulang...", #files))
     wait(1000)
     thisScript():reload()
 end
