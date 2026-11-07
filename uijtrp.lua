@@ -2157,64 +2157,120 @@ local function updaterFileExists(path)
     return true
 end
 
-local function downloadUpdaterFile(url, path)
-    local downloadStatus = require("moonloader").download_status
-    local success = false
-    local failed = false
-    local finalStatus
-    local okStart, startError = pcall(downloadUrlToFile, url, path, function(_, status)
-        finalStatus = status
-        if status == downloadStatus.STATUS_DOWNLOADINGDATA or status == downloadStatus.STATUSEX_DATAAVAILABLE then
-            local file = io.open(path, "rb")
-            if file then
-                updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
-                file:close()
-            end
-        end
-        if status == downloadStatus.STATUS_ENDDOWNLOADDATA
-            or status == downloadStatus.STATUSEX_ENDDOWNLOAD then
-            success = true
-        elseif (downloadStatus.STATUS_DOWNLOADERROR and status == downloadStatus.STATUS_DOWNLOADERROR)
-            or (downloadStatus.STATUS_DOWNLOAD_ERROR and status == downloadStatus.STATUS_DOWNLOAD_ERROR) then
-            failed = true
-        end
-    end)
-    if not okStart then
-        return false, tostring(startError)
-    end
-
-    local deadline = os.time() + 45
-    while not success and not failed and os.time() < deadline do
-        local file = io.open(path, "rb")
-        if file then
-            updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
-            file:close()
-        end
-        wait(50)
-    end
-    if not success then
-        return false, failed and ("status unduhan " .. tostring(finalStatus)) or "unduhan timeout"
-    end
-
-    local file = io.open(path, "rb")
-    if not file then
-        return false, "file unduhan tidak ditemukan"
-    end
-    local size = file:seek("end")
-    file:close()
-    if not size or size == 0 then
-        return false, "file unduhan kosong"
-    end
-    updateStatus.currentBytes = size
-    return true
-end
-
 local function readUpdaterFile(path)
     local file = io.open(path, "rb")
-    if not file then return nil end
-    local content = file:read("*a")
-    file:close()
+    if not file then return nil, "file tidak ditemukan atau tidak dapat dibuka" end
+
+    local readOk, content, readError = pcall(file.read, file, "*a")
+    local closeOk, closed, closeError = pcall(file.close, file)
+    if not readOk then return nil, tostring(content) end
+    if not content then return nil, tostring(readError or "file tidak dapat dibaca") end
+    if not closeOk or not closed then
+        return nil, tostring(closeError or "file gagal ditutup setelah dibaca")
+    end
     return content
+end
+
+local function downloadUpdaterFile(url, path, validate)
+    local downloadStatus = require("moonloader").download_status
+    local maxAttempts = 3
+    local lastError = "unduhan gagal"
+
+    for attempt = 1, maxAttempts do
+        local attemptPath = path .. ".attempt-" .. attempt
+        os.remove(attemptPath)
+
+        local success = false
+        local failed = false
+        local finalStatus
+        updateStatus.currentBytes = 0
+        local okStart, startError = pcall(downloadUrlToFile, url, attemptPath, function(_, status)
+            finalStatus = status
+            if status == downloadStatus.STATUS_DOWNLOADINGDATA or status == downloadStatus.STATUSEX_DATAAVAILABLE then
+                local file = io.open(attemptPath, "rb")
+                if file then
+                    updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
+                    file:close()
+                end
+            end
+            if status == downloadStatus.STATUS_ENDDOWNLOADDATA
+                or status == downloadStatus.STATUSEX_ENDDOWNLOAD then
+                success = true
+            elseif (downloadStatus.STATUS_DOWNLOADERROR and status == downloadStatus.STATUS_DOWNLOADERROR)
+                or (downloadStatus.STATUS_DOWNLOAD_ERROR and status == downloadStatus.STATUS_DOWNLOAD_ERROR) then
+                failed = true
+            end
+        end)
+
+        if not okStart then
+            lastError = tostring(startError)
+        else
+            local deadline = os.clock() + 45
+            while not success and not failed and os.clock() < deadline do
+                local file = io.open(attemptPath, "rb")
+                if file then
+                    updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
+                    file:close()
+                end
+                wait(50)
+            end
+
+            if failed then
+                lastError = "status unduhan " .. tostring(finalStatus)
+            elseif not success then
+                lastError = "unduhan timeout"
+            else
+                local content, readError = readUpdaterFile(attemptPath)
+                if not content then
+                    lastError = readError
+                elseif content == "" then
+                    lastError = "file unduhan kosong"
+                else
+                    local valid = true
+                    local validationError
+                    if validate then
+                        local validateOk, validationResult, validationMessage =
+                            pcall(validate, attemptPath, content)
+                        if not validateOk then
+                            valid = false
+                            validationError = tostring(validationResult)
+                        else
+                            valid = validationResult
+                            validationError = validationMessage
+                        end
+                    end
+
+                    if not valid then
+                        lastError = tostring(validationError or "isi file hasil unduhan tidak valid")
+                    else
+                        os.remove(path)
+                        local moved, moveError = os.rename(attemptPath, path)
+                        if moved then
+                            local savedContent, savedError = readUpdaterFile(path)
+                            if savedContent == content then
+                                updateStatus.currentBytes = #savedContent
+                                return true, nil, savedContent
+                            end
+                            os.remove(path)
+                            lastError = "file tidak terbaca setelah disimpan: "
+                                .. tostring(savedError or "isi file berubah")
+                        else
+                            lastError = "file hasil unduhan tidak dapat dipasang: " .. tostring(moveError)
+                        end
+                    end
+                end
+            end
+        end
+
+        os.remove(attemptPath)
+        if attempt < maxAttempts then
+            setUpdaterStatus("Mengulangi unduhan", string.format(
+                "Percobaan %d/%d: %s", attempt + 1, maxAttempts, path:match("([^\\/]+)$") or path))
+            wait(500 * attempt)
+        end
+    end
+
+    return false, string.format("gagal setelah %d percobaan: %s", maxAttempts, lastError)
 end
 
 local function removeUpdaterFiles(paths)
@@ -2294,7 +2350,10 @@ local function checkForGithubUpdate()
     local temporaryPaths = { commitPath, manifestPath }
 
     setUpdaterStatus("Memeriksa GitHub", UPDATE_CONFIG.repository .. "/" .. UPDATE_CONFIG.branch)
-    local downloaded, downloadError = downloadUpdaterFile(commitUrl, commitPath)
+    local downloaded, downloadError, commitBody = downloadUpdaterFile(commitUrl, commitPath, function(_, content)
+        if content:match('"sha"%s*:%s*"[%x]+"') then return true end
+        return false, "respons GitHub tidak berisi commit yang valid"
+    end)
     if not downloaded then
         removeUpdaterFiles(temporaryPaths)
         updaterNotice("Tidak bisa memeriksa GitHub: " .. tostring(downloadError))
@@ -2302,7 +2361,6 @@ local function checkForGithubUpdate()
         return
     end
 
-    local commitBody = readUpdaterFile(commitPath)
     local commit = commitBody and commitBody:match('"sha"%s*:%s*"([%x]+)"')
     os.remove(commitPath)
     if not commit then
@@ -2313,16 +2371,17 @@ local function checkForGithubUpdate()
     end
 
     local installedCommit = readUpdaterFile(statePath)
-    if installedCommit and installedCommit:match("^([%x]+)") == commit then
-        os.remove(manifestPath)
-        print("[PBRP Updater] Script sudah versi terbaru.")
-        finishUpdaterStatus("Versi terbaru", "Tidak ada file yang perlu diunduh.")
-        return
-    end
+    local sameCommit = installedCommit and installedCommit:match("^([%x]+)") == commit
 
     setUpdaterStatus("Memeriksa daftar file", "Commit " .. commit:sub(1, 7))
     local manifestUrl = prefix .. commit .. "/update-manifest.txt"
-    downloaded, downloadError = downloadUpdaterFile(manifestUrl, manifestPath)
+    local manifest
+    downloaded, downloadError, manifest = downloadUpdaterFile(manifestUrl, manifestPath, function(_, content)
+        for line in content:gmatch("[^\r\n]+") do
+            if line:match("^%s*(.-)%s*$") == "uijtrp.lua" then return true end
+        end
+        return false, "manifest kosong atau tidak menyertakan uijtrp.lua"
+    end)
     if not downloaded then
         removeUpdaterFiles(temporaryPaths)
         updaterNotice("Tidak bisa mengunduh manifest: " .. tostring(downloadError))
@@ -2330,7 +2389,6 @@ local function checkForGithubUpdate()
         return
     end
 
-    local manifest = readUpdaterFile(manifestPath)
     os.remove(manifestPath)
     if not manifest then
         updaterNotice("Manifest update tidak dapat dibaca.")
@@ -2359,6 +2417,30 @@ local function checkForGithubUpdate()
         return
     end
 
+    if sameCommit then
+        local repairFiles = {}
+        for _, relativePath in ipairs(files) do
+            local localPath = relativePath:gsub("/", "\\")
+            local destination = scriptDirectory .. "\\" .. localPath
+            local content = readUpdaterFile(destination)
+            local needsRepair = not content or content == ""
+            if not needsRepair and relativePath:lower():match("%.lua$") then
+                local compiled = loadfile(destination)
+                needsRepair = compiled == nil
+            end
+            if needsRepair then
+                repairFiles[#repairFiles + 1] = relativePath
+            end
+        end
+        files = repairFiles
+        if #files == 0 then
+            print("[PBRP Updater] Script sudah versi terbaru.")
+            finishUpdaterStatus("Versi terbaru", "Tidak ada file yang perlu diunduh.")
+            return
+        end
+        updaterNotice(string.format("%d file hilang atau tidak terbaca; akan diunduh ulang.", #files))
+    end
+
     updateStatus.completed = 0
     updateStatus.total = #files
     local staged, stagedPaths = {}, {}
@@ -2385,25 +2467,16 @@ local function checkForGithubUpdate()
             downloadSoundPlayed = true
         end
         os.remove(temporary)
-        downloaded, downloadError = downloadUpdaterFile(sourceUrl, temporary)
+        downloaded, downloadError = downloadUpdaterFile(sourceUrl, temporary, function(path)
+            local compiled, compileError = loadfile(path)
+            return compiled ~= nil, compileError
+        end)
         if not downloaded then
             removeUpdaterFiles(stagedPaths)
             os.remove(temporary)
             updaterNotice("Gagal mengunduh " .. relativePath .. ": " .. tostring(downloadError))
             finishUpdaterStatus("Unduhan gagal", relativePath .. ": " .. tostring(downloadError))
             return
-        end
-
-        if relativePath:lower():match("%.lua$") then
-            setUpdaterStatus("Memvalidasi Lua", string.format("%d/%d  %s", index, #files, relativePath))
-            local compiled, compileError = loadfile(temporary)
-            if not compiled then
-                removeUpdaterFiles(stagedPaths)
-                os.remove(temporary)
-                updaterNotice("Syntax Lua tidak valid pada " .. relativePath .. ": " .. tostring(compileError))
-                finishUpdaterStatus("Validasi gagal", relativePath .. ": sintaks Lua tidak valid.")
-                return
-            end
         end
 
         staged[#staged + 1] = {
@@ -2628,6 +2701,11 @@ function main()
                             if not ok then
                                 updaterNotice("Pemeriksaan update gagal: " .. tostring(updateError))
                                 finishUpdaterStatus("Update gagal", tostring(updateError))
+                            end
+                            if updateStatus.title ~= "Versi terbaru"
+                                and updateStatus.title ~= "Update selesai" then
+                                nextUpdateCheck = os.clock() + 30
+                                print("[PBRP Updater] Pemeriksaan ulang dijadwalkan dalam 30 detik.")
                             end
                         end)
                     elseif normalizedIp ~= UPDATE_CONFIG.serverIp then
