@@ -2250,9 +2250,7 @@ local function isAllowedUpdaterPath(relativePath)
     local extension = segments[#segments]:match("%.([%w]+)$")
     if not extension then return false end
     extension = extension:lower()
-    return extension == "lua" or extension == "png" or extension == "jpg"
-        or extension == "jpeg" or extension == "webp" or extension == "bmp"
-        or extension == "wav" or extension == "mp3" or extension == "ogg"
+    return extension == "lua"
 end
 
 local function ensureUpdaterParentDirectory(relativePath)
