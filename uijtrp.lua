@@ -2176,106 +2176,124 @@ local function readUpdaterFile(path)
     return content
 end
 
-local function downloadUpdaterFile(url, path, validate)
+local function downloadUpdaterFile(url, path, validate, fallbackUrls)
     local downloadStatus = require("moonloader").download_status
-    local maxAttempts = 3
+    local maxAttempts = 2
     local lastError = "unduhan gagal"
+    local lastHost = url:match("^https?://([^/]+)") or "server"
+    local urls = { url }
+    for _, fallbackUrl in ipairs(fallbackUrls or {}) do
+        urls[#urls + 1] = fallbackUrl
+    end
 
-    for attempt = 1, maxAttempts do
-        local attemptPath = path .. ".attempt-" .. attempt
-        os.remove(attemptPath)
+    for urlIndex, currentUrl in ipairs(urls) do
+        for attempt = 1, maxAttempts do
+            local totalAttempts = #urls * maxAttempts
+            local attemptNumber = (urlIndex - 1) * maxAttempts + attempt
+            lastHost = currentUrl:match("^https?://([^/]+)") or "server"
+            local attemptPath = path .. ".attempt-" .. attemptNumber
+            os.remove(attemptPath)
 
-        local success = false
-        local failed = false
-        local finalStatus
-        updateStatus.currentBytes = 0
-        local okStart, startError = pcall(downloadUrlToFile, url, attemptPath, function(_, status)
-            finalStatus = status
-            if status == downloadStatus.STATUS_DOWNLOADINGDATA or status == downloadStatus.STATUSEX_DATAAVAILABLE then
-                local file = io.open(attemptPath, "rb")
-                if file then
-                    updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
-                    file:close()
+            local success = false
+            local failed = false
+            local finalStatus
+            updateStatus.currentBytes = 0
+            local okStart, startResult, startError = pcall(downloadUrlToFile, currentUrl, attemptPath, function(_, status)
+                finalStatus = status
+                if status == downloadStatus.STATUS_DOWNLOADINGDATA
+                    or status == downloadStatus.STATUSEX_DATAAVAILABLE then
+                    local file = io.open(attemptPath, "rb")
+                    if file then
+                        updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
+                        file:close()
+                    end
                 end
-            end
-            if status == downloadStatus.STATUS_ENDDOWNLOADDATA
-                or status == downloadStatus.STATUSEX_ENDDOWNLOAD then
-                success = true
-            elseif (downloadStatus.STATUS_DOWNLOADERROR and status == downloadStatus.STATUS_DOWNLOADERROR)
-                or (downloadStatus.STATUS_DOWNLOAD_ERROR and status == downloadStatus.STATUS_DOWNLOAD_ERROR) then
-                failed = true
-            end
-        end)
-
-        if not okStart then
-            lastError = tostring(startError)
-        else
-            local deadline = os.clock() + 45
-            while not success and not failed and os.clock() < deadline do
-                local file = io.open(attemptPath, "rb")
-                if file then
-                    updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
-                    file:close()
+                if status == downloadStatus.STATUS_ENDDOWNLOADDATA
+                    or status == downloadStatus.STATUSEX_ENDDOWNLOAD
+                    or status == downloadStatus.STATUS_USINGCACHEDCOPY then
+                    success = true
+                elseif (downloadStatus.STATUS_DOWNLOADERROR and status == downloadStatus.STATUS_DOWNLOADERROR)
+                    or (downloadStatus.STATUS_DOWNLOAD_ERROR and status == downloadStatus.STATUS_DOWNLOAD_ERROR)
+                    or (downloadStatus.STATUSEX_LOWRESOURCE and status == downloadStatus.STATUSEX_LOWRESOURCE)
+                    or (downloadStatus.STATUS_SSLUX_NAVBLOCKED and status == downloadStatus.STATUS_SSLUX_NAVBLOCKED) then
+                    failed = true
                 end
-                wait(50)
-            end
+            end)
 
-            if failed then
-                lastError = "status unduhan " .. tostring(finalStatus)
-            elseif not success then
-                lastError = "unduhan timeout"
+            if not okStart then
+                lastError = tostring(startResult)
+            elseif startResult == false then
+                lastError = tostring(startError or "downloadUrlToFile menolak unduhan")
             else
-                local content, readError = readUpdaterFile(attemptPath)
-                if not content then
-                    lastError = readError
-                elseif content == "" then
-                    lastError = "file unduhan kosong"
-                else
-                    local valid = true
-                    local validationError
-                    if validate then
-                        local validateOk, validationResult, validationMessage =
-                            pcall(validate, attemptPath, content)
-                        if not validateOk then
-                            valid = false
-                            validationError = tostring(validationResult)
-                        else
-                            valid = validationResult
-                            validationError = validationMessage
-                        end
+                local deadline = os.clock() + 45
+                while not success and not failed and os.clock() < deadline do
+                    local file = io.open(attemptPath, "rb")
+                    if file then
+                        updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
+                        file:close()
                     end
+                    wait(50)
+                end
 
-                    if not valid then
-                        lastError = tostring(validationError or "isi file hasil unduhan tidak valid")
+                if failed then
+                    lastError = "status unduhan " .. tostring(finalStatus)
+                elseif not success then
+                    lastError = "unduhan timeout"
+                else
+                    local content, readError = readUpdaterFile(attemptPath)
+                    if not content then
+                        lastError = readError
+                    elseif content == "" then
+                        lastError = "file unduhan kosong"
                     else
-                        os.remove(path)
-                        local moved, moveError = os.rename(attemptPath, path)
-                        if moved then
-                            local savedContent, savedError = readUpdaterFile(path)
-                            if savedContent == content then
-                                updateStatus.currentBytes = #savedContent
-                                return true, nil, savedContent
+                        local valid = true
+                        local validationError
+                        if validate then
+                            local validateOk, validationResult, validationMessage =
+                                pcall(validate, attemptPath, content)
+                            if not validateOk then
+                                valid = false
+                                validationError = tostring(validationResult)
+                            else
+                                valid = validationResult
+                                validationError = validationMessage
                             end
-                            os.remove(path)
-                            lastError = "file tidak terbaca setelah disimpan: "
-                                .. tostring(savedError or "isi file berubah")
+                        end
+
+                        if not valid then
+                            lastError = tostring(validationError or "isi file hasil unduhan tidak valid")
                         else
-                            lastError = "file hasil unduhan tidak dapat dipasang: " .. tostring(moveError)
+                            os.remove(path)
+                            local moved, moveError = os.rename(attemptPath, path)
+                            if moved then
+                                local savedContent, savedError = readUpdaterFile(path)
+                                if savedContent == content then
+                                    updateStatus.currentBytes = #savedContent
+                                    return true, nil, savedContent
+                                end
+                                os.remove(path)
+                                lastError = "file tidak terbaca setelah disimpan: "
+                                    .. tostring(savedError or "isi file berubah")
+                            else
+                                lastError = "file hasil unduhan tidak dapat dipasang: " .. tostring(moveError)
+                            end
                         end
                     end
                 end
             end
-        end
 
-        os.remove(attemptPath)
-        if attempt < maxAttempts then
-            setUpdaterStatus("Mengulangi unduhan", string.format(
-                "Percobaan %d/%d: %s", attempt + 1, maxAttempts, path:match("([^\\/]+)$") or path))
-            wait(500 * attempt)
+            os.remove(attemptPath)
+            if attemptNumber < totalAttempts then
+                local host = currentUrl:match("^https?://([^/]+)") or "server"
+                setUpdaterStatus("Mengulangi unduhan", string.format(
+                    "Percobaan %d/%d via %s", attemptNumber + 1, totalAttempts, host))
+                wait(500 * attemptNumber)
+            end
         end
     end
 
-    return false, string.format("gagal setelah %d percobaan: %s", maxAttempts, lastError)
+    return false, string.format("gagal setelah %d percobaan melalui %d host: %s",
+        #urls * maxAttempts, #urls, lastHost .. ": " .. lastError)
 end
 
 local function removeUpdaterFiles(paths)
@@ -2353,12 +2371,17 @@ local function checkForGithubUpdate()
     local manifestPath = scriptDirectory .. "\\.pbrp-update-manifest.tmp"
     local statePath = scriptDirectory .. "\\.pbrp-update-version"
     local temporaryPaths = { commitPath, manifestPath }
+    local atomCommitUrl = "https://github.com/" .. UPDATE_CONFIG.owner .. "/"
+        .. UPDATE_CONFIG.repository .. "/commits/" .. UPDATE_CONFIG.branch .. ".atom"
 
     setUpdaterStatus("Memeriksa GitHub", UPDATE_CONFIG.repository .. "/" .. UPDATE_CONFIG.branch)
     local downloaded, downloadError, commitBody = downloadUpdaterFile(commitUrl, commitPath, function(_, content)
-        if content:match('"sha"%s*:%s*"[%x]+"') then return true end
+        if content:match('"sha"%s*:%s*"[%x]+"')
+            or content:match("Grit::Commit/[%x]+") then
+            return true
+        end
         return false, "respons GitHub tidak berisi commit yang valid"
-    end)
+    end, { atomCommitUrl })
     if not downloaded then
         removeUpdaterFiles(temporaryPaths)
         updaterNotice("Tidak bisa memeriksa GitHub: " .. tostring(downloadError))
@@ -2366,7 +2389,8 @@ local function checkForGithubUpdate()
         return
     end
 
-    local commit = commitBody and commitBody:match('"sha"%s*:%s*"([%x]+)"')
+    local commit = commitBody and (commitBody:match('"sha"%s*:%s*"([%x]+)"')
+        or commitBody:match("Grit::Commit/([%x]+)"))
     os.remove(commitPath)
     if not commit then
         os.remove(manifestPath)
@@ -2380,13 +2404,15 @@ local function checkForGithubUpdate()
 
     setUpdaterStatus("Memeriksa daftar file", "Commit " .. commit:sub(1, 7))
     local manifestUrl = prefix .. commit .. "/update-manifest.txt"
+    local cdnPrefix = "https://cdn.jsdelivr.net/gh/" .. UPDATE_CONFIG.owner .. "/"
+        .. UPDATE_CONFIG.repository .. "@" .. commit .. "/"
     local manifest
     downloaded, downloadError, manifest = downloadUpdaterFile(manifestUrl, manifestPath, function(_, content)
         for line in content:gmatch("[^\r\n]+") do
             if line:match("^%s*(.-)%s*$") == "uijtrp.lua" then return true end
         end
         return false, "manifest kosong atau tidak menyertakan uijtrp.lua"
-    end)
+    end, { cdnPrefix .. "update-manifest.txt" })
     if not downloaded then
         removeUpdaterFiles(temporaryPaths)
         updaterNotice("Tidak bisa mengunduh manifest: " .. tostring(downloadError))
@@ -2475,7 +2501,7 @@ local function checkForGithubUpdate()
         downloaded, downloadError = downloadUpdaterFile(sourceUrl, temporary, function(path)
             local compiled, compileError = loadfile(path)
             return compiled ~= nil, compileError
-        end)
+        end, { cdnPrefix .. relativePath })
         if not downloaded then
             removeUpdaterFiles(stagedPaths)
             os.remove(temporary)
