@@ -80,9 +80,15 @@ return function(imgui, V2, color, sendChat, inventoryUI, isPlayerUiReady)
         return first and second and first.kind == second.kind and first.id == second.id
     end
 
+    local function isPlayerInVehicle()
+        if type(isCharInAnyCar) ~= "function" then return false end
+        local ok, inVehicle = pcall(isCharInAnyCar, PLAYER_PED)
+        return ok and inVehicle
+    end
+
     local function update(enabled)
         enabled = enabled and isPlayerUiReady()
-        if not enabled then
+        if not enabled or isPlayerInVehicle() then
             state.target = nil
             state.menuTarget = nil
             state.menuOpen = false
@@ -117,8 +123,7 @@ return function(imgui, V2, color, sendChat, inventoryUI, isPlayerUiReady)
 
         if frame then frame.HideCursor = true end
         if state.target and not sampIsChatInputActive() and not sampIsDialogActive() then
-            local key = state.target.kind == "player" and 0x12 or 0x46
-            if wasKeyPressed(key) then
+            if wasKeyPressed(0x12) then
                 state.menuTarget = state.target
                 state.menuOpen = true
                 state.payAmount[0] = 100
@@ -144,7 +149,7 @@ return function(imgui, V2, color, sendChat, inventoryUI, isPlayerUiReady)
     end
 
     local function drawPrompt(drawList, target)
-        local key = target.kind == "player" and "ALT" or "F"
+        local key = "ALT"
         local subject = target.kind == "player" and target.name or "Kendaraan"
         if #subject > 14 then subject = subject:sub(1, 13) .. "..." end
         local width, height = 204, 52

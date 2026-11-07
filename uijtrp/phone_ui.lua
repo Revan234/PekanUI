@@ -114,6 +114,9 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     local callChatOpen = false
     local taxiOrderPending = false
     local videoCall = false
+    local videoPeer = nil
+    local nextVideoStatusAt = 0
+    local cameraActionStatus = ""
     local readyAcknowledged = false
     local lastReadyAttempt = 0
     local selectedPhoto = 1
@@ -880,6 +883,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             sendChat("/rpui_phone_close")
             uiSounds.play("close")
         end
+        photoMedia.restoreCamera()
         open = false
         unlocked = false
         status = ""
@@ -898,6 +902,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     end
 
     local function goHome()
+        photoMedia.restoreCamera()
         page = unlocked and "home" or "lock"
         chatNumber = nil
         musicView = "playlists"
@@ -914,6 +919,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         elseif page == "messages" and chatNumber then
             chatNumber = nil
         else
+            photoMedia.restoreCamera()
             page = unlocked and "home" or "lock"
         end
         status = ""
@@ -921,6 +927,9 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
 
     local function phoneAction(app)
         NS.navDir = (page == "home") and 0 or 1
+        if page == "camera" and app ~= "camera" then
+            photoMedia.restoreCamera()
+        end
         page = app
         status = ""
         if app == "contacts" then
@@ -929,6 +938,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             chatNumber = nil
             sendChat("/rpui_phone_contacts")
         elseif app == "camera" then
+            cameraActionStatus = ""
+            photoMedia.beginCamera()
             photoMedia.refresh()
         elseif app == "photos" then
             photoMedia.refresh()
@@ -976,6 +987,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         local number, enabled = text:match("^@PBRPUI:PHONE:OPEN:(%-?%d+):([01])$")
         if number then
             stopRingtone()
+            photoMedia.restoreCamera()
             phoneNumber = tonumber(number) or 0
             phoneEnabled = enabled == "1"
             open = true
@@ -994,6 +1006,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             callState = nil
             callNumber = 0
             videoCall = false
+            videoPeer = nil
+            nextVideoStatusAt = 0
             readyAcknowledged = false
             lastReadyAttempt = 0
             clearBuffer(selectedNumber)
@@ -1011,6 +1025,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         end
         if text == "@PBRPUI:PHONE:CLOSED" then
             stopRingtone()
+            photoMedia.restoreCamera()
             open = false
             unlocked = false
             page = "lock"
@@ -1020,6 +1035,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             callChatOpen = false
             clearBuffer(callMessageInput)
             videoCall = false
+            videoPeer = nil
+            nextVideoStatusAt = 0
             readyAcknowledged = false
             return true
         end
@@ -1234,10 +1251,13 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             text:match("^@PBRPUI:PHONE:CALL:(%u+):(%d+):?(%d*)$")
         if state == "OUT" or state == "IN" or state == "ACTIVE" then
             open = true
+            photoMedia.restoreCamera()
             local previousCallState = callState
             callState = state
             callNumber = tonumber(callerNumber) or 0
             videoCall = videoFlag == "1"
+            videoPeer = nil
+            nextVideoStatusAt = 0
             page = "call"
             if state == "IN" then
                 startRingtone()
@@ -1254,6 +1274,21 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             end
             return true
         end
+        local peerId, peerX, peerY, peerZ, peerInterior, peerWorld, peerActivity =
+            text:match("^@PBRPUI:PHONE:VIDEO:PEER:(%d+):([%-%.%d]+):([%-%.%d]+):([%-%.%d]+):(%d+):(%d+):([^:]*)$")
+        if peerId then
+            videoPeer = {
+                id = tonumber(peerId),
+                x = tonumber(peerX),
+                y = tonumber(peerY),
+                z = tonumber(peerZ),
+                interior = tonumber(peerInterior),
+                world = tonumber(peerWorld),
+                activity = peerActivity,
+                updatedAt = os.clock()
+            }
+            return true
+        end
         if text == "@PBRPUI:PHONE:CALL:CLOSED" then
             stopRingtone()
             callState = nil
@@ -1261,6 +1296,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             callChatOpen = false
             clearBuffer(callMessageInput)
             videoCall = false
+            videoPeer = nil
+            nextVideoStatusAt = 0
             page = unlocked and "home" or "lock"
             NS.navDir = -1
             status = "Panggilan berakhir."
@@ -1851,6 +1888,10 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         local avail = imgui.GetContentRegionAvail().x
         local dl = imgui.GetWindowDrawList()
         local label = contactLabel(callNumber) or tostring(callNumber)
+        if videoCall and callState == "ACTIVE" and os.clock() >= nextVideoStatusAt then
+            sendChat("/rpui_phone_video_status")
+            nextVideoStatusAt = os.clock() + 1
+        end
         local title = callState == "IN" and "Panggilan masuk..."
             or (callState == "ACTIVE" and "Terhubung" or "Memanggil...")
         if callState == "ACTIVE" and A.callSince then
@@ -1870,9 +1911,26 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             imgui.Dummy(size)
             dl:AddRectFilled(V2(p.x, p.y + 10), V2(p.x + size.x, p.y + 10 + size.y), U(0.06, 0.08, 0.12, 1), 20)
             dl:AddRect(V2(p.x, p.y + 10), V2(p.x + size.x, p.y + 10 + size.y), U(1, 1, 1, 0.12), 20, 0, 1)
-            avatar(dl, cx, p.y + 84, 38, label)
-            dl:AddText(V2(p.x + 16, p.y + 156), U(0.96, 0.97, 1, 1), "Video RP  -  " .. tostring(callNumber))
-            dl:AddText(V2(p.x + 16, p.y + 178), U(0.62, 0.66, 0.74, 1), "Tampilan simulasi, suara via panggilan server")
+            avatar(dl, cx, p.y + 58, 30, label)
+            local now = os.clock()
+            local live = callState == "ACTIVE" and videoPeer and now - videoPeer.updatedAt <= 4
+            local liveColor = live and U(0.20, 0.88, 0.50, 1) or U(0.75, 0.78, 0.84, 1)
+            dl:AddCircleFilled(V2(p.x + 18, p.y + 108), 3.5, liveColor, 12)
+            dl:AddText(V2(p.x + 27, p.y + 101), liveColor, live and "LIVE RP" or "MENUNGGU DATA")
+            if live then
+                local activity = fitText(videoPeer.activity, avail - 32)
+                local position = string.format("X %.1f  Y %.1f  Z %.1f", videoPeer.x, videoPeer.y, videoPeer.z)
+                dl:AddText(V2(p.x + 16, p.y + 124), U(0.96, 0.97, 1, 1), activity)
+                dl:AddText(V2(p.x + 16, p.y + 147), U(0.72, 0.76, 0.83, 1), position)
+                dl:AddText(V2(p.x + 16, p.y + 169), U(0.62, 0.66, 0.74, 1),
+                    string.format("Dunia %d  /  Interior %d", videoPeer.world, videoPeer.interior))
+            elseif callState == "ACTIVE" then
+                dl:AddText(V2(p.x + 16, p.y + 126), U(0.78, 0.81, 0.87, 1), "Meminta posisi dan aktivitas partner...")
+            else
+                dl:AddText(V2(p.x + 16, p.y + 126), U(0.78, 0.81, 0.87, 1), "Video aktif setelah panggilan dijawab.")
+            end
+            dl:AddText(V2(p.x + 16, p.y + 190), U(0.52, 0.56, 0.64, 1),
+                "Data live RP; stream gambar pemain tidak tersedia.")
         else
             imgui.Dummy(V2(1, 220))
             local cy = p.y + 112
@@ -1962,7 +2020,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     pages.camera = function()
         header("Kamera")
         local avail = imgui.GetContentRegionAvail()
-        local vfH = math.max(200, avail.y - 168)
+        local vfH = math.max(150, avail.y - 190)
         local p = imgui.GetCursorScreenPos()
         imgui.Dummy(V2(avail.x, vfH))
         local dl = imgui.GetWindowDrawList()
@@ -1977,9 +2035,9 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         local cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
         local fs = 38 + math.sin(A.t * 2.4) * 2
         dl:AddRect(V2(cx - fs, cy - fs), V2(cx + fs, cy + fs), U(1, 0.84, 0.04, 0.95), 4, 0, 1.6)
-        -- pil zoom
+        -- indikator lensa mengikuti zoom FOV aktif
         dl:AddRectFilled(V2(cx - 16, y1 - 52), V2(cx + 16, y1 - 30), U(0, 0, 0, 0.45), 11)
-        dlTextC(dl, "1x", cx, y1 - 49, U(1, 0.84, 0.04, 1), 0.95)
+        dlTextC(dl, tostring(photoMedia.zoom()) .. "x", cx, y1 - 49, U(1, 0.84, 0.04, 1), 0.95)
         dlText(dl, "Ambil gambar dari layar permainan", x0 + 16, y1 - 22, U(1, 1, 1, 0.6), 0.85)
         local flash = 1 - (A.t - A.shutterAt) / 0.28
         if flash > 0 then
@@ -1987,9 +2045,35 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         end
 
         imgui.Dummy(V2(1, 2))
+        imgui.TextColored(K.muted, "ZOOM / FIELD OF VIEW")
+        local zoomChoices = { 0.5, 1, 2 }
+        local zoomWidth = (avail.x - 12) / #zoomChoices
+        for index, value in ipairs(zoomChoices) do
+            if index > 1 then imgui.SameLine(0, 6) end
+            local label = tostring(value) .. "x##phone_zoom_" .. tostring(value)
+            if pillButton(label, zoomWidth, 30, photoMedia.zoom() == value and "primary" or "glass") then
+                photoMedia.setZoom(value)
+            end
+        end
+        imgui.Spacing()
+        imgui.TextColored(K.muted, "POSE")
+        local poses = {
+            { label = "Santai", anim = "Santai" },
+            { label = "Melambai", anim = "Lambai" },
+            { label = "Duduk", anim = "Duduk" }
+        }
+        local poseWidth = (avail.x - 12) / #poses
+        for index, pose in ipairs(poses) do
+            if index > 1 then imgui.SameLine(0, 6) end
+            if pillButton(pose.label .. "##phone_pose_" .. pose.anim, poseWidth, 30, "glass") then
+                sendChat("/e " .. pose.anim)
+                cameraActionStatus = "Pose " .. pose.label .. " dikirim; karakter harus di kaki."
+            end
+        end
+        imgui.Spacing()
         centerText("FOTO", V4(1, 0.84, 0.04, 1), 0.95)
         local busy = photoMedia.isBusy()
-        local d = 68
+        local d = 58
         imgui.SetCursorPosX(imgui.GetCursorPosX() + (avail.x - d) / 2)
         local clicked = imgui.InvisibleButton("##phone_camera", V2(d, d))
         hoverKey("##phone_camera")
@@ -1999,10 +2083,17 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         dl:AddCircleFilled(sc, (d / 2 - 8) * (imgui.IsItemActive() and 0.86 or 1),
             busy and U(0.55, 0.57, 0.62, 1) or U(1, 1, 1, 1), 40)
         if clicked and not busy then
+            cameraActionStatus = ""
             photoMedia.capture()
             A.shutterAt = A.t
         end
-        status = photoMedia.status()
+        if photoMedia.cameraStatus() ~= "" then
+            status = photoMedia.cameraStatus()
+        elseif cameraActionStatus ~= "" then
+            status = cameraActionStatus
+        else
+            status = photoMedia.status()
+        end
         drawStatus()
     end
 
@@ -2917,6 +3008,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         onServerMessage = onServerMessage,
         reset = function()
             stopRingtone()
+            photoMedia.restoreCamera()
             open = false
             page = "lock"
             unlocked = false
@@ -2925,6 +3017,9 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             callNumber = 0
             callChatOpen = false
             videoCall = false
+            videoPeer = nil
+            nextVideoStatusAt = 0
+            cameraActionStatus = ""
             readyAcknowledged = false
             NS.peek = false
             NS.banner = nil

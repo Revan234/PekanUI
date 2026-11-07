@@ -72,6 +72,7 @@ local UPDATE_CONFIG = {
 }
 local updateStatus = {
     active = false,
+    visible = false,
     title = "",
     detail = "",
     completed = 0,
@@ -1993,6 +1994,7 @@ notificationFrame.HideCursor = true
 local updaterFrame = imgui.OnFrame(
     function()
         return isSampAvailable()
+            and updateStatus.visible
             and updateStatus.title ~= ""
             and (updateStatus.active or os.clock() - updateStatus.finishedAt < 5)
     end,
@@ -2131,6 +2133,7 @@ end
 
 local function setUpdaterStatus(title, detail)
     updateStatus.active = true
+    updateStatus.visible = title ~= "Memeriksa GitHub"
     updateStatus.title = title
     updateStatus.detail = detail or ""
     updateStatus.finishedAt = 0
@@ -2140,8 +2143,11 @@ local function finishUpdaterStatus(title, detail)
     updateStatus.title = title
     updateStatus.detail = detail or ""
     updateStatus.active = false
+    updateStatus.visible = title ~= "Versi terbaru"
     updateStatus.finishedAt = os.clock()
-    recordUpdateLog(title, detail)
+    if title ~= "Versi terbaru" then
+        recordUpdateLog(title, detail)
+    end
 end
 
 local function updaterFileExists(path)
@@ -2511,6 +2517,7 @@ function main()
 
     local lastReadyHeartbeat = 0
     local wasPlayerSpawned = false
+    local patchNotesAttempted = false
     local lastObservedServer = nil
     local nextServerCheck = 0
     local nextUpdateCheck = 0
@@ -2539,6 +2546,10 @@ function main()
         else
             if not wasPlayerSpawned then
                 loadingUI.finishConnection()
+                if not patchNotesAttempted then
+                    notificationUI.showPatchNotes()
+                    patchNotesAttempted = true
+                end
             end
             if not wasPlayerSpawned or os.time() - lastReadyHeartbeat >= 10 then
                 sampSendChat("/rpui_client_ready 2")

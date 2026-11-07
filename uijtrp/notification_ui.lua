@@ -28,10 +28,10 @@ local NOTIFY = {
 }
 
 local THEMES = {
-    [0] = { title = "ERROR",      color = { 0.96, 0.30, 0.32 }, sound = "error" },
-    [1] = { title = "BERHASIL",   color = { 0.30, 0.82, 0.57 }, sound = "success" },
-    [2] = { title = "PERINGATAN", color = { 0.98, 0.68, 0.25 }, sound = "warning" },
-    [3] = { title = "INFORMASI",  color = { 0.38, 0.67, 0.98 }, sound = "info" },
+    [0] = { title = "ERROR",      color = { 0.96, 0.30, 0.32 }, sound = "05_pop.wav" },
+    [1] = { title = "BERHASIL",   color = { 0.30, 0.82, 0.57 }, sound = "19_kalimba.wav" },
+    [2] = { title = "PERINGATAN", color = { 0.98, 0.68, 0.25 }, sound = "05_pop.wav" },
+    [3] = { title = "INFORMASI",  color = { 0.38, 0.67, 0.98 }, sound = "02_chime_up.wav" },
 }
 
 return function(imgui, V2, isReady, uiSounds)
@@ -39,9 +39,18 @@ return function(imgui, V2, isReady, uiSounds)
 
     local notifications = {}
     local pending = {}
+    local patchCard = nil
+    local patchShown = false
     local readySince = nil
     local enabled = NOTIFY.enabled
     local inventoryOwns = function() return false end
+    local patchNotes = {
+        "HUD karakter dengan status kesehatan dan perlindungan",
+        "Akses cepat fitur melalui radial menu",
+        "Notifikasi server ditampilkan dalam kartu UI",
+        "Panel Pekan UI untuk fitur utama yang lebih teratur",
+    }
+    local patchDuration = 14
 
     -- ---------- suara ----------
     local sounds = { handles = {}, failed = {} }
@@ -49,21 +58,17 @@ return function(imgui, V2, isReady, uiSounds)
     local function soundDirectory()
         local ok, path = pcall(function() return thisScript().path end)
         local base = ok and path and path:match("^(.*)[\\/]") or "."
-        return base .. "\\uijtrp\\assets\\sounds\\"
+        return base .. "\\uijtrp\\jtrp_phone\\notif\\"
     end
 
     local function playSound(name)
-        if uiSounds and uiSounds.playNotify then
-            local ok = pcall(uiSounds.playNotify, name)
-            if ok then return end
-        end
         local handle = sounds.handles[name]
         if not handle and not sounds.failed[name] then
-            local path = soundDirectory() .. "notify_" .. name .. ".wav"
+            local path = soundDirectory() .. name
             local okFile, exists = pcall(doesFileExist, path)
             if okFile and exists then
                 local okLoad, loaded = pcall(loadAudioStream, path)
-                if okLoad and loaded then
+                if okLoad and loaded and loaded ~= 0 then
                     handle = loaded
                     sounds.handles[name] = handle
                 end
@@ -226,6 +231,9 @@ return function(imgui, V2, isReady, uiSounds)
     local function tick()
         isReadyForCapture()
         local now = os.clock()
+        if patchCard and now >= patchCard.expires then
+            patchCard = nil
+        end
         for id, group in pairs(pending) do
             if group.message and now - (group.updated or group.started) >= NOTIFY.pairWindow then
                 pushNotification(group.kind, THEMES[group.kind].title, group.message.text)
@@ -239,7 +247,7 @@ return function(imgui, V2, isReady, uiSounds)
 
     local function hasItems()
         tick()
-        return #notifications > 0
+        return #notifications > 0 or patchCard ~= nil
     end
 
     -- ---------- gambar ----------
@@ -358,6 +366,50 @@ return function(imgui, V2, isReady, uiSounds)
 
             cursorY = cursorY + (height + 10 * scale) * math.max(0.0, exit)
         end
+
+        if patchCard then
+            local age = now - patchCard.created
+            local remaining = patchCard.expires - now
+            local entrance = easeOut(age / 0.4)
+            local alpha = entrance * math.min(1, math.max(0, remaining / 0.45))
+            local width, height = 540 * scale, 238 * scale
+            local x = (display.x - width) * 0.5
+            local y = display.y * 0.18 + (1 - entrance) * 18 * scale
+            local p1, p2 = V2(x, y), V2(x + width, y + height)
+            local accent = { 0.72, 0.55, 1.0 }
+
+            dl:AddRectFilled(V2(x + 3, y + 6), V2(x + width + 3, y + height + 6),
+                color(0, 0, 0, 0.38 * alpha), 16 * scale)
+            dl:AddRectFilled(p1, p2, color(0.045, 0.04, 0.075, 0.97 * alpha), 16 * scale)
+            dl:AddRect(p1, p2, color(accent[1], accent[2], accent[3], 0.42 * alpha),
+                16 * scale, 0, 1.2)
+            dl:AddRectFilledMultiColor(p1, V2(x + width, y + 5 * scale),
+                color(accent[1], accent[2], accent[3], 0.9 * alpha),
+                color(0.35, 0.65, 1.0, 0.9 * alpha),
+                color(0.35, 0.65, 1.0, 0.9 * alpha),
+                color(accent[1], accent[2], accent[3], 0.9 * alpha))
+            dl:AddText(V2(x + 26 * scale, y + 20 * scale),
+                color(accent[1], accent[2], accent[3], alpha), "PEKAN UI | UPDATE TERBARU")
+            dl:AddText(V2(x + 26 * scale, y + 48 * scale),
+                color(0.84, 0.86, 0.92, 0.95 * alpha),
+                "Pembaruan dan fitur UI yang bisa kamu gunakan:")
+
+            for i, text in ipairs(patchNotes) do
+                local rowY = y + (83 + (i - 1) * 29) * scale
+                dl:AddCircleFilled(V2(x + 31 * scale, rowY + 8 * scale),
+                    3.2 * scale, color(accent[1], accent[2], accent[3], alpha), 12)
+                dl:AddText(V2(x + 45 * scale, rowY),
+                    color(0.94, 0.95, 0.98, alpha), text)
+            end
+
+            local progress = math.max(0, math.min(1, remaining / patchDuration))
+            local bx0, bx1 = x + 20 * scale, x + width - 20 * scale
+            dl:AddRectFilled(V2(bx0, y + height - 11 * scale),
+                V2(bx1, y + height - 8 * scale), color(1, 1, 1, 0.08 * alpha), 2)
+            dl:AddRectFilled(V2(bx0, y + height - 11 * scale),
+                V2(bx0 + (bx1 - bx0) * progress, y + height - 8 * scale),
+                color(accent[1], accent[2], accent[3], alpha), 2)
+        end
         imgui.End()
     end
 
@@ -378,6 +430,13 @@ return function(imgui, V2, isReady, uiSounds)
         setEnabled = function(value) enabled = value and true or false end,
         isEnabled = function() return enabled end,
         setInventoryOwner = function(fn) inventoryOwns = fn end,
+        showPatchNotes = function()
+            if patchShown then return false end
+            patchShown = true
+            local now = os.clock()
+            patchCard = { created = now, expires = now + patchDuration }
+            return true
+        end,
         config = NOTIFY,
     }
 end
