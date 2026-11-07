@@ -1896,7 +1896,7 @@ local function drawStatsHud(dl, p, h, needs, footer, dt, ds)
 
     if footer then
         if hudNet.money ~= nil then
-            chip(dl, x + 14, cy + 3, "$ " .. fmtNum(hudNet.money), 0.40, 0.90, 0.62, false)
+            chip(dl, x + 14, cy + 3, "Rp " .. fmtNum(hudNet.money), 0.40, 0.90, 0.62, false)
         end
         if hudState.ammo ~= nil and hudState.ammo > 1 then
             chip(dl, x + STATS_W - 14, cy + 3, "AMMO " .. hudState.ammo, 1.0, 0.78, 0.30, true)

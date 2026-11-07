@@ -32,6 +32,13 @@ local CFG = {
     debugFile    = "inventory_textdraw_dump.txt",
 }
 
+local function formatRupiah(amount)
+    local value = math.floor(tonumber(amount) or 0)
+    local negative = value < 0
+    local digits = tostring(math.abs(value)):reverse():gsub("(%d%d%d)", "%1."):reverse():gsub("%.$", "")
+    return (negative and "-" or "") .. digits
+end
+
 ------------------------------------------------------------------ PARSER TEXTDRAW (murni, tanpa imgui)
 local function cleanText(s)
     s = tostring(s or "")
@@ -223,6 +230,7 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
     local openedAt = 0
     local source = "td"             -- "td" | "server" | "demo"
     local shopOpen = false
+    local shopSuppressed = false
     local shopTitle = ""
     local shopItems = {}
     local selectedShopItem = nil
@@ -459,6 +467,7 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
 
     -- dipanggil dari hook samp.events (atau manual dari script utama)
     local function onShowTextDraw(id, data)
+        if shopSuppressed then return nil end
         if not tdActive and not CFG.autoTextdrawOpen then return nil end
         local t = recordTd(id, data)
         if not tdActive then
@@ -498,6 +507,7 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
     end
 
     local function onTextDrawSetString(id, text)
+        if shopSuppressed then return nil end
         local t = tdAll[id]
         if t then
             t.text = cleanText(text)
@@ -682,6 +692,19 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
             :gsub("{%x%x%x%x%x%x}", "")
             :gsub("^%s+", "")
             :gsub("%s+$", "")
+
+        if text == "@PBRPUI:INV:NATIVE:SHOP:OPEN" then
+            shopSuppressed = true
+            deactivateTextdraw()
+            open = false
+            selectedSlot = nil
+            giveMode = false
+            shopOpen, shopItems, selectedShopItem = false, {}, nil
+            return true
+        elseif text == "@PBRPUI:INV:NATIVE:SHOP:CLOSE" then
+            shopSuppressed = false
+            return true
+        end
 
         local inventoryWeight = text:match("^@PBRPUI:INV:BEGIN:([%d%.%-]+):%d+$")
         if inventoryWeight then
@@ -1009,13 +1032,13 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
                 imgui.SetCursorScreenPos(V2(p.x + 64, p.y + 8))
                 imgui.TextColored(WHITE, selectedShopItem.name)
                 imgui.SetCursorScreenPos(V2(p.x + 64, p.y + 32))
-                imgui.TextColored(GRAY, string.format("$%d per item", selectedShopItem.price))
+                imgui.TextColored(GRAY, string.format("Rp %s per item", formatRupiah(selectedShopItem.price * 15000)))
 
                 imgui.InputInt("Jumlah##shop_amount", shopAmount, 1, 10)
                 if shopAmount[0] < 1 then shopAmount[0] = 1 end
                 if shopAmount[0] > 100 then shopAmount[0] = 100 end
                 imgui.TextColored(GRAY,
-                    string.format("Total: $%d", selectedShopItem.price * shopAmount[0]))
+                    string.format("Total: Rp %s", formatRupiah(selectedShopItem.price * shopAmount[0] * 15000)))
                 if styledButton("BELI##shop_buy", -1, 38, "accent") then
                     sendChat(string.format("/rpui_shop_buy %d %d",
                         selectedShopItem.index, shopAmount[0]))
@@ -1032,8 +1055,8 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
             end
             for _, entry in ipairs(shopItems) do
                 local selected = selectedShopItem == entry
-                local label = string.format("%s  -  $%d##shop_item_%d",
-                    entry.name, entry.price, entry.index)
+                local label = string.format("%s  -  Rp %s##shop_item_%d",
+                    entry.name, formatRupiah(entry.price * 15000), entry.index)
                 if styledButton(label, -1, 38, selected and "accent" or "glass") then
                     selectedShopItem = entry
                     shopAmount[0] = 1

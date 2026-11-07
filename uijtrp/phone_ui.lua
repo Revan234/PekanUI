@@ -2391,7 +2391,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         beginCard("##phone_yellow_post", 106, K.glass)
         imgui.SetNextItemWidth(-1)
         styledInput("##phone_yellow_input", "Tulis iklan (maks. 100 karakter)", yellowInput)
-        if pillButton("PASANG IKLAN - $100##phone_yellow_submit", -1, 34, "primary") then
+        if pillButton("PASANG IKLAN - Rp 1.500.000##phone_yellow_submit", -1, 34, "primary") then
             local post = ffi.string(yellowInput):match("^%s*(.-)%s*$")
             if post ~= "" and #post <= 100 and not post:find(":") then
                 sendChat("/rpui_yellow_post " .. post)
