@@ -1,0 +1,63 @@
++0:00:06.064 [pool]     INFO  ball guard: CPed::SpecialEntityPreCollisionStuff 005E3C30 guarded (stub 20D00000)
++0:00:06.067 [pool]     INFO  ball guard: CVehicle::SpecialEntityPreCollisionStuff 006D6640 guarded (stub 20D10000)
++0:00:06.068 [pool]     INFO  loaded. /pool to place a table, /pooldiag for diagnostics
++0:00:06.073 [basketball] INFO  ready
++0:00:06.078 [streetball] INFO  ready
++0:00:06.083 [soccer]   INFO  ready
++0:00:06.092 [dance]    INFO  ready
++0:00:06.097 [lowrider] INFO  ready
++0:00:06.102 [arcade]   INFO  ready: 4 games, 9 cabinets on the map
++0:00:06.132 [boardgames] INFO  ready: 22 games
++0:00:06.149 [warzone]  INFO  ready (sounds: the pack)
++0:00:06.459 [lowrider] INFO  meet music (audio zone LOWRIDE) off
++0:00:07.267 [basketball] INFO  relay: connected over UDP (direct, port 7790) in 1195 ms
++0:00:07.269 [streetball] INFO  relay: connected over UDP (direct, port 7790) in 1192 ms
++0:00:07.270 [soccer]   INFO  relay: connected over UDP (direct, port 7790) in 1188 ms
++0:00:07.270 [dance]    INFO  relay: connected over UDP (direct, port 7790) in 1184 ms
++0:00:07.273 [lowrider] INFO  relay: connected over UDP (direct, port 7790) in 1176 ms
++0:00:07.274 [arcade]   INFO  relay: connected over UDP (direct, port 7790) in 1170 ms
++0:00:07.275 [boardgames] INFO  relay: connected over UDP (direct, port 7790) in 1169 ms
++0:00:07.275 [warzone]  INFO  [relay] relay: connected over UDP (direct, port 7790) in 1126 ms
++0:00:12.252 [pool]     INFO  [sync] room np:<hidden>
++0:00:12.253 [pool]     INFO  relay: connected over UDP (direct, port 7790) in 3 ms
++0:00:12.255 [pool]     INFO  [sync] relay connected as #1842
++0:00:12.255 [basketball] INFO  [net] room bb:<hidden>
++0:00:12.256 [arcade]   INFO  [net] room ar:<hidden>
++0:00:12.463 [sao]      INFO  [sao] driving style: installed (stub 274C0000)
++0:00:12.468 [sao]      INFO  [sao] selfie drive-by: installed (stub 274F0000)
++0:00:12.468 [sao]      INFO  [sao] death fix: installed (stub 27500000)
++0:00:12.470 [sao]      INFO  [sao] dead peds drop no pickups
++0:00:12.470 [sao]      INFO  [sao] fire gun: FireGun after the shot: original (fine)
++0:00:12.471 [sao]      INFO  [sao] stream guard: installed (stub 27510000)
++0:00:12.471 [sao]      INFO  [sao] crash recorder: running
++0:00:12.595 [sao]      INFO  [sao] phone: 5 game icon(s) moved into the Game Center
++0:00:12.968 [sao]      GLTCH the previous game session ended unexpectedly - unknown cause, no crash recorded (closed from Task Manager, another program, or a crash another mod hid)
++0:00:12.974 [sao]      INFO  session started
++0:00:12.974 [sao]      ENV   MoonLoader: 26
++0:00:12.974 [sao]      ENV   SA-MP: R1
++0:00:12.976 [sao]      ENV   game folder mods: CLEO.asi, modloader.asi, MoonLoader.asi, SAMPFUNCS.asi, sampvoice.asi, bass.dll, EAX.DLL, lua51.dll, ogg.dll, samp.dll, vorbis.dll, vorbisFile.dll, vorbishooked.dll, 16 others
++0:00:12.979 [sao]      ENV   game settings: frame limiter off, draw distance 1.75, widescreen off, sfx volume 64, radio volume 64
++0:00:12.980 [sao]      ENV   graphics: guard band -100000000..100000000 x -100000000..100000000 px, clipping off in the game (the menu draws with it on)
++0:00:12.980 [sao]      ENV   menu: theme 5, text size 0.9, player tags false
++0:00:12.982 [sao]      ENV   menu library: cimguidx9
++0:00:12.982 [sao]      ENV   mod version: 0.9.86
++0:00:12.983 [sao]      ENV   moonloader scripts: SanAndreasOnline.lua, 2 others
++0:00:12.983 [sao]      ENV   phone: size 3, live 3D false, music 1
++0:00:12.983 [sao]      ENV   settings: menu: acceptKey=122, activityTags=true, autoUpdate=true, bbKey=88, chat=true, cursorKey=121, danceClubs=true, declineKey=123, friendOnline=true, friendServer=true, interactCams=true, interactHints=true, interactKey=72, key=113, lifeDefault=false, newsSeen=, nf_friendOffline=true, nf_friendOnline=true, nf_gameEvents=true, nf_gameInvites=true, nf_myScores=true, nf_othersScores=true, nf_playerOnline=true, nf_requests=true, nf_session=true, nf_tips=true, nf_updates=true, notesSeen=0.9.69, photoPose=true, playerTags=false, portrait=true, pregame=first, proDriving=true, quickKey=90, reloadKey=82, reports=true, reportsAsk=true, scale=0.9, setupDone=true, showcase.auto=true, showcase.done=0.9.80, socialSetupDone=true, soundBg=true, streetLife=false, theme=5, toasts=true, uiH=500, uiW=890, updateCheck=true, updateNotes=true, v=6, vehRadioSync=true
++0:00:12.986 [sao]      ENV   settings: phone: appsV=3, autoPeek=true, bannerTime=2, brightness=1, dnd=false, focusButton=true, frame=3, ft3d=false, ft3dV=2, ftQuality=2, ftSounds=true, ftZoom=2, fxVol=0.6, h24=true, haptics=true, holdPhone=true, homeLayout.v=1, key=49, keyAnswer=122, keyBack=0, keyClicks=true, keyClose=27, keyDecline=123, keyPin=66, keyRotate=0, keySize=0, keySwitcher=0, lockSound=true, loudV=2, mirrorSelf=true, musicVolume=1, muteKey=77, nf_clock=true, nf_facetime=true, nf_maps=true, nf_messages=true, nf_pulse=true, nf_sao=true, phoneShortcuts=true, previews=true, ringVol=0.9, ringtone=3, saoNotifs=true, shutterSound=true, size=3, sizeV=2, sounds=true, speakerVolume=0.91461010385465, speakersOn=true, spkHint=true, storeChecked.<hidden>=true, storeGames.basketball=1792302767, storeGames.pool=1792302895, storeMoved.1=soccer, storeMoved.2=dance, storeMoved.3=lowrider, storeV=1, systemSounds=true, textSize=2, textTone=1, timeMode=real, vibrate=true, volume=0.8, wallMotion=true, wallpaper=1
++0:00:12.990 [sao]      ENV   settings: privacy: (defaults - never changed)
++0:00:12.990 [sao]      ENV   settings: street life: (defaults - never changed)
++0:00:12.999 [sao]      INFO  [sao] brains as single player: 32 added, 20 already there (SA-MP's)
++0:00:14.131 [sao]      INFO  [sao] doors: 372 doors known (some from the map files), the server shuts them
++0:00:14.134 [sao]      INFO  [sao] task guard: in place (stub 29A80000)
++0:00:14.137 [sao]      INFO  [sao] SAMPFUNCS exit guard: already in place (stub 10080000: the loader, or before a reload)
++0:00:14.137 [sao]      INFO  [sao] brain guard: in place (stub 29A90000)
++0:00:14.139 [sao]      INFO  [sao] loaded (server <hidden>, UIF) - /sao to start
++0:00:14.178 [sao]      INFO  [sao] showcase: 0.9.83 waits for a calm moment
++0:00:14.182 [sao]      INFO  [sao] relay: connected over UDP (direct, port 7790) in 1721 ms
++0:00:14.184 [sao]      INFO  [sao] uif: dialog hook: hooked
++0:00:14.185 [sao]      INFO  [sao] mode: join rules on 15 more accept(s) (15)
++0:00:14.185 [sao]      INFO  [sao] doors: left as the server has them - the game mode is not known yet (/fr opens them)
++0:00:14.187 [sao]      INFO  [sao] sao health: hooks installed (stub 29BE0000)
++0:00:14.217 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:00:17.469 [sao]      INFO  [sao] robbery: 80 stores - 55 robbed in their shop, 18 on a forecourt, 7 at a walk-up counter, 0 with no shop we know (never robbed)

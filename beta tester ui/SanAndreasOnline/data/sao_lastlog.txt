@@ -1,0 +1,40 @@
++0:00:10 [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:00:12 [sao] robbery: 80 stores - 55 robbed in their shop, 18 on a forecourt, 7 at a walk-up counter, 0 with no shop we know (never robbed)
++0:00:16 [sao] uif: dialog hook proven: the server's dialog (id 30) passed it - silent reads on
++0:00:18 [sao] update: GitHub reached (manifest2.json)
++0:00:19 [sao] portrait: 1 worn object(s)
++0:00:26 [sao] uif: asked /stats (first look)
++0:00:26 [sao] uif: mode freeroam (Freeroam) - asked by the mod
++0:00:26 [sao] doors: single player's doors open - freeroam
++0:00:31 [sao] uif: typed /dm
++0:00:31 [sao] uif: asked /stats (typed /dm)
++0:00:36 [sao] uif: asked /stats (typed /dm)
++0:00:41 [sao] uif: a mode line (me): "* <me>(#) has joined Deathmatch (players: #)"
++0:00:41 [sao] uif: a mode line (me): ">> You will only see messages from players in Deathmatch"
++0:00:41 [sao] mode: paused - deathmatch ((line) Deathmatch) - the phone and F2: their harmless parts
++0:00:41 [sao] doors: left as the server has them - not in freeroam (CnR, PTP, a deathmatch...: the server's own interiors)
++0:00:43 [sao] uif: asked /stats (typed /dm)
++0:00:51 [sao] uif: a mode line (other): "* <nick>(#) has joined Deathmatch (players: #)"
++0:01:10 [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:01:20 [sao] portrait: 0 worn object(s)
++0:01:27 [sao] uif: asked /stats (spawn)
++0:01:31 [sao] uif: asked /stats (interior)
++0:01:39 [sao] uif: typed /gw
++0:01:39 [sao] uif: asked /stats (spawn)
++0:01:39 [sao] uif: mode freeroam (Freeroam - Global War) - asked by the mod
++0:01:39 [sao] mode: resumed - freeroam (Freeroam - Global War) after 58 s
++0:01:39 [sao] doors: single player's doors open - freeroam
++0:01:43 [sao] uif: asked /stats (interior)
++0:01:57 [sao] uif: asked /stats (spawn)
++0:02:10 [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:02:27 [sao] uif: asked /stats (spawn)
++0:02:29 [sao] portrait: 1 worn object(s)
++0:02:32 [sao] uif: asked /stats (spawn)
++0:02:39 [sao] uif: asked /stats (spawn)
++0:02:43 [sao] uif: asked /stats (spawn)
++0:02:57 [sao] uif: asked /stats (spawn)
++0:03:10 [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:03:27 [sao] uif: asked /stats (spawn)
++0:03:29 [sao] portrait: 0 worn object(s)
++0:03:40 [sao] uif: asked /stats (spawn)
++0:03:44 [sao] uif: asked /stats (spawn)

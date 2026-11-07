@@ -1,0 +1,258 @@
++0:00:08.166 [pool]     INFO  ball guard: CPed::SpecialEntityPreCollisionStuff 005E3C30 guarded (stub 24C70000)
++0:00:08.169 [pool]     INFO  ball guard: CVehicle::SpecialEntityPreCollisionStuff 006D6640 guarded (stub 24C80000)
++0:00:08.169 [pool]     INFO  loaded. /pool to place a table, /pooldiag for diagnostics
++0:00:08.173 [basketball] INFO  ready
++0:00:08.176 [streetball] INFO  ready
++0:00:08.179 [soccer]   INFO  ready
++0:00:08.188 [dance]    INFO  ready
++0:00:08.195 [lowrider] INFO  ready
++0:00:08.199 [arcade]   INFO  ready: 4 games, 9 cabinets on the map
++0:00:08.224 [boardgames] INFO  ready: 22 games
++0:00:08.234 [warzone]  INFO  ready (sounds: the pack)
++0:00:08.438 [lowrider] INFO  meet music (audio zone LOWRIDE) off
++0:00:08.990 [basketball] INFO  relay: connected over UDP (direct, port 7790) in 816 ms
++0:00:08.990 [streetball] INFO  relay: connected over UDP (direct, port 7790) in 814 ms
++0:00:08.992 [soccer]   INFO  relay: connected over UDP (direct, port 7790) in 812 ms
++0:00:08.993 [dance]    INFO  relay: connected over UDP (direct, port 7790) in 810 ms
++0:00:08.993 [lowrider] INFO  relay: connected over UDP (direct, port 7790) in 800 ms
++0:00:08.993 [arcade]   INFO  relay: connected over UDP (direct, port 7790) in 794 ms
++0:00:08.995 [boardgames] INFO  relay: connected over UDP (direct, port 7790) in 792 ms
++0:00:08.996 [warzone]  INFO  [relay] relay: connected over UDP (direct, port 7790) in 761 ms
++0:00:10.564 [pool]     INFO  [sync] room np:<hidden>
++0:00:10.567 [pool]     INFO  relay: connected over UDP (direct, port 7790) in 4 ms
++0:00:10.569 [pool]     INFO  [sync] relay connected as #1730
++0:00:10.570 [basketball] INFO  [net] room bb:<hidden>
++0:00:10.572 [arcade]   INFO  [net] room ar:<hidden>
++0:00:10.580 [sao]      INFO  [sao] driving style: installed (stub 2A000000)
++0:00:10.586 [sao]      INFO  [sao] selfie drive-by: installed (stub 2A030000)
++0:00:10.586 [sao]      INFO  [sao] death fix: installed (stub 2A040000)
++0:00:10.586 [sao]      INFO  [sao] dead peds drop no pickups
++0:00:10.586 [sao]      INFO  [sao] fire gun: FireGun after the shot: original (fine)
++0:00:10.588 [sao]      INFO  [sao] stream guard: installed (stub 2A050000)
++0:00:10.588 [sao]      INFO  [sao] crash recorder: running
++0:00:10.708 [sao]      INFO  the previous game session ended normally: the player quit (typed /q in SA-MP)
++0:00:10.711 [sao]      INFO  session started
++0:00:10.711 [sao]      ENV   MoonLoader: 26
++0:00:10.711 [sao]      ENV   SA-MP: R1
++0:00:10.711 [sao]      ENV   game folder mods: CLEO.asi, modloader.asi, MoonLoader.asi, SAMPFUNCS.asi, sampvoice.asi, bass.dll, EAX.DLL, lua51.dll, ogg.dll, samp.dll, vorbis.dll, vorbisFile.dll, vorbishooked.dll, 16 others
++0:00:10.713 [sao]      ENV   game settings: frame limiter off, draw distance 1.75, widescreen off, sfx volume 64, radio volume 64
++0:00:10.714 [sao]      ENV   graphics: guard band -100000000..100000000 x -100000000..100000000 px, clipping off in the game (the menu draws with it on)
++0:00:10.714 [sao]      ENV   menu: theme 5, text size 0.9, player tags false
++0:00:10.714 [sao]      ENV   menu library: cimguidx9
++0:00:10.714 [sao]      ENV   mod version: 0.9.86
++0:00:10.714 [sao]      ENV   moonloader scripts: SanAndreasOnline.lua, 2 others
++0:00:10.716 [sao]      ENV   phone: size 3, live 3D false, music 1
++0:00:10.716 [sao]      ENV   settings: menu: acceptKey=122, activityTags=true, autoUpdate=true, bbKey=88, chat=true, cursorKey=121, danceClubs=true, declineKey=123, friendOnline=true, friendServer=true, interactCams=true, interactHints=true, interactKey=72, key=113, lifeDefault=false, memCardSeenAt=1792475144, newsSeen=, nf_friendOffline=true, nf_friendOnline=true, nf_gameEvents=true, nf_gameInvites=true, nf_myScores=true, nf_othersScores=true, nf_playerOnline=true, nf_requests=true, nf_session=true, nf_tips=true, nf_updates=true, notesSeen=0.9.86, photoPose=true, playerTags=false, portrait=true, pregame=first, proDriving=true, quickKey=90, reloadKey=82, reports=true, reportsAsk=true, scale=0.9, setupDone=true, showcase.auto=true, showcase.autoN=1, showcase.autoPid=5208, showcase.autoV=0.9.83, showcase.done=0.9.83, socialSetupDone=true, soundBg=true, streetLife=false, theme=5, toasts=true, uiH=500, uiW=890, updateCheck=true, updateNotes=true, v=6, vehRadioSync=true
++0:00:10.720 [sao]      ENV   settings: phone: appsV=3, autoPeek=true, bannerTime=2, brightness=1, dnd=false, focusButton=true, frame=3, ft3d=false, ft3dV=2, ftQuality=2, ftSounds=true, ftZoom=2, fxVol=0.6, h24=true, haptics=true, holdPhone=true, homeLayout.v=1, key=49, keyAnswer=122, keyBack=0, keyClicks=true, keyClose=27, keyDecline=123, keyPin=66, keyRotate=0, keySize=0, keySwitcher=0, lockSound=true, loudV=2, mirrorSelf=true, musicVolume=1, muteKey=77, nf_clock=true, nf_facetime=true, nf_maps=true, nf_messages=true, nf_pulse=true, nf_sao=true, phoneShortcuts=true, previews=true, ringVol=0.9, ringtone=3, saoNotifs=true, shutterSound=true, size=3, sizeV=2, sounds=true, speakerVolume=0.91461010385465, speakersOn=true, spkHint=true, storeChecked.<hidden>=true, storeGames.basketball=1792302767, storeGames.pool=1792302895, storeMoved.1=soccer, storeMoved.2=dance, storeMoved.3=lowrider, storeMovedDone=true, storeV=1, systemSounds=true, textSize=2, textTone=1, timeMode=real, vibrate=true, volume=0.8, wallMotion=true, wallpaper=1
++0:00:10.724 [sao]      ENV   settings: privacy: (defaults - never changed)
++0:00:10.724 [sao]      ENV   settings: street life: (defaults - never changed)
++0:00:10.729 [sao]      INFO  [sao] brains as single player: 32 added, 20 already there (SA-MP's)
++0:00:11.528 [sao]      INFO  [sao] doors: 372 doors known (some from the map files), the server shuts them
++0:00:11.529 [sao]      INFO  [sao] task guard: in place (stub 2C600000)
++0:00:11.531 [sao]      INFO  [sao] SAMPFUNCS exit guard: already in place (stub 0FEF0000: the loader, or before a reload)
++0:00:11.532 [sao]      INFO  [sao] brain guard: in place (stub 2C610000)
++0:00:11.532 [sao]      INFO  [sao] loaded (server <hidden>, UIF) - /sao to start
++0:00:11.543 [sao]      INFO  [sao] relay: connected over UDP (direct, port 7790) in 964 ms
++0:00:11.544 [sao]      INFO  [sao] uif: dialog hook: hooked
++0:00:11.544 [sao]      INFO  [sao] mode: join rules on 15 more accept(s) (15)
++0:00:11.545 [sao]      INFO  [sao] doors: left as the server has them - the game mode is not known yet (/fr opens them)
++0:00:11.547 [sao]      INFO  [sao] sao health: hooks installed (stub 2C690000)
++0:00:11.551 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:00:12.554 [sao]      INFO  [sao] robbery: 80 stores - 55 robbed in their shop, 18 on a forecourt, 7 at a walk-up counter, 0 with no shop we know (never robbed)
++0:00:17.225 [sao]      INFO  [sao] uif: dialog hook proven: the server's dialog (id 30) passed it - silent reads on
++0:00:17.759 [sao]      INFO  [sao] update: GitHub reached (manifest2.json)
++0:00:21.144 [sao]      INFO  [sao] uif: asked /stats (first look)
++0:00:21.516 [sao]      INFO  [sao] uif: mode freeroam (Freeroam - Group Zone War) - asked by the mod
++0:00:21.516 [sao]      INFO  [sao] doors: single player's doors open - freeroam
++0:00:25.147 [sao]      INFO  [sao] uif: asked /stats (teleport)
++0:00:50.631 [sao]      INFO  [sao] uif: a mode line (me): "(GROUP) [#] <nick>(#):  GZ • #:# left. Reinforcements join /gz#! Tip: Sawn-Off: Train in DM to improve your aim."
++0:00:50.634 [sao]      INFO  [sao] uif: asked /stats (line)
++0:01:07.310 [sao]      INFO  [sao] uif: typed /fr
++0:01:07.313 [sao]      INFO  [sao] uif: asked /stats (typed /fr)
++0:01:07.659 [sao]      INFO  [sao] heists: cost store nearby 0.06 ms a frame (worst 1.00), HUD 0.02 ms (worst 1.00), 6237 frames
++0:01:19.412 [sao]      INFO  [sao] uif: asked /stats (teleport)
++0:01:19.423 [sao]      GLTCH the game froze for 11.5 s
++0:01:19.423 [sao]      GLTCH a frame took 11527 ms (phone closed, memory 907 MB free of 2047 (biggest block 307 MB)); the mod: 54 ms of it - labels drawing 46.2, street life 3.9, network 2.8
++0:01:19.424 [sao]      PERF  114 fps, worst frame 11527 ms, 1 freezes, Lua 20.8 MB, streaming 83 MB (phone closed, memory 907 MB free of 2047 (biggest block 307 MB)) | mod 0.93 ms/frame: street life 0.22, service + logs 0.20, guards 0.19, interactions 0.11, phone 0.09, labels drawing 0.05
++0:01:19.424 [sao]      STATE web       github 2/2 ok, 979 ms avg | relay 8/8 ok, 583 ms avg
++0:01:19.426 [sao]      STATE input     input to the game, 1 resets (last: closed), keys synced: 0 pressed, 0 let go; controls: free
++0:01:19.426 [sao]      STATE relay     ready, UDP port 7790, rtt 364 ms (best 290), 0 reconnects, sent 45 / received 468
++0:01:19.426 [sao]      STATE direct    minigames/taxi: socket closed, public address not found, 0 line(s)
++0:01:19.427 [sao]      STATE memory    memory 907 MB free of 2047 (biggest block 307 MB)
++0:01:19.427 [sao]      STATE threads   10 made in a coroutine, 10 by 1 factory(ies), installed assigned
++0:01:19.427 [sao]      STATE phone     closed, app -, size 3, text 2, memory level ok
++0:01:19.427 [sao]      STATE facetime  no call
++0:01:19.427 [sao]      STATE screens   0 screen(s) playing; YouTube not tried yet; failures 0; game volume: sfx 64, radio 64 of 64; BASS global: streams 10000, samples 10000 of 10000; my screens volume 0.80
++0:01:19.427 [sao]      STATE music     nothing playing
++0:01:19.427 [sao]      STATE street    street life: around you 0 peds, 0 cars | ours 0 / 17 peds (single-player budget), 0 / 12 cars | spawned 0 peds, 0 cars; sync sync v2: 0 messages / 0 records sent, 0 received, 0 puppets shown, 0 area rooms, hits 0 sent / 0 taken; copies: 0 peds on foot (0 moving), 0 cars (0 driven, 0 bikes), 0 passengers, 0 fading in; net street life is off (Settings > World)
++0:01:19.429 [sao]      STATE stream guard installed (stub 2A050000); empty music tracks caught: 0
++0:01:19.429 [sao]      STATE raceworld race world: off, 0 player(s) of other race worlds hidden here
++0:01:19.430 [sao]      STATE missionworld mission world: off, 0 player(s) of other mission worlds hidden here
++0:01:19.430 [sao]      STATE setup     done
++0:01:19.430 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:01:38.917 [sao]      INFO  [sao] uif: asked /stats (colour)
++0:01:39.510 [sao]      INFO  report: sending session_2026-10-20_15-58-43.log (12058 bytes, glitch)
++0:01:39.959 [sao]      INFO  report: sent, thank you
++0:01:43.197 [sao]      WARN  [sao] web: POST ours failed after 1269 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 1 failed)
++0:01:43.198 [sao]      INFO  [sao] pulse: sign-in this device needs the password (HTTP 401, You are on a new internet connection or PC - log in with your Pulse password to )
++0:01:46.528 [sao]      INFO  [sao] portrait: 1 worn object(s)
++0:01:49.161 [sao]      INFO  [sao] uif: asked /stats (spawn)
++0:02:19.000 [sao]      INFO      (the line above came 3 more times, the last at +0:02:18)
++0:02:19.429 [sao]      PERF  116 fps, worst frame 33 ms, 0 freezes, Lua 31.8 MB, streaming 87 MB (phone closed, memory 868 MB free of 2047 (biggest block 307 MB)) | mod 0.87 ms/frame: street life 0.22, guards 0.19, service + logs 0.17, interactions 0.10, phone 0.09, network 0.05 | screen: 76 tag place(s) at the camera left out
++0:02:19.437 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:02:38.920 [sao]      INFO  [sao] uif: asked /stats (spawn)
++0:02:46.766 [sao]      INFO  [sao] portrait: 0 worn object(s)
++0:02:49.167 [sao]      INFO  [sao] uif: asked /stats (spawn)
++0:03:13.000 [sao]      INFO      (the line above came 1 more time, the last at +0:02:56)
++0:03:13.091 [sao]      WARN  [sao] web: POST ours failed after 1002 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 2 failed)
++0:03:14.417 [sao]      INFO  [sao] uif: asked /stats (spawn)
++0:03:19.431 [sao]      PERF  118 fps, worst frame 26 ms, 0 freezes, Lua 24.0 MB, streaming 87 MB (phone closed, memory 867 MB free of 2047 (biggest block 307 MB)) | mod 0.88 ms/frame: street life 0.23, guards 0.19, service + logs 0.16, interactions 0.11, phone 0.09, network 0.05
++0:03:19.439 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:03:32.659 [sao]      INFO  [sao] uif: asked /stats (spawn)
++0:03:47.000 [sao]      INFO      (the line above came 1 more time, the last at +0:03:38)
++0:03:47.126 [sao]      INFO  [sao] portrait: 1 worn object(s)
++0:03:49.913 [sao]      INFO  [sao] uif: asked /stats (spawn)
++0:04:19.000 [sao]      INFO      (the line above came 2 more times, the last at +0:04:12)
++0:04:19.432 [sao]      PERF  114 fps, worst frame 176 ms, 0 freezes, Lua 30.3 MB, streaming 90 MB (phone closed, memory 833 MB free of 2047 (biggest block 307 MB)) | mod 0.95 ms/frame: street life 0.23, guards 0.19, service + logs 0.17, phone 0.11, interactions 0.11, phone drawing 0.07 | screen: 43 tag place(s) at the camera left out
++0:04:19.446 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:04:29.441 [sao]      GLTCH the game froze for 7.6 s
++0:04:29.441 [sao]      GLTCH a frame took 7595 ms (phone closed, memory 833 MB free of 2047 (biggest block 307 MB)); the mod: 3.5 ms of it (not the mod)
++0:04:32.665 [sao]      INFO  [sao] uif: asked /stats (teleport)
++0:04:34.146 [sao]      INFO  [sao] speakers: boombox of player#ee25: off
++0:04:43.129 [sao]      WARN  [sao] web: POST ours failed after 1024 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 3 failed)
++0:04:46.870 [sao]      GLTCH a frame took 485 ms (phone closed, memory 817 MB free of 2047 (biggest block 307 MB)); the mod: 2.5 ms of it (not the mod)
++0:04:47.489 [sao]      INFO  [sao] speakers: boombox of player#ee25: on (YouTube)
++0:04:47.514 [sao]      INFO  [sao] speakers: one source for player#ee25: 1 of his 2 play - car radio, boombox silent
++0:04:53.507 [sao]      INFO  [sao] speakers: one source for player#ee25: 0 of his 1 play - boombox silent
++0:05:19.437 [sao]      PERF  95 fps, worst frame 7595 ms, 2 freezes, Lua 48.9 MB, streaming 92 MB (phone closed, memory 814 MB free of 2047 (biggest block 307 MB)) | mod 0.96 ms/frame: street life 0.22, guards 0.18, service + logs 0.16, phone 0.14, interactions 0.11, menu drawing 0.08
++0:05:19.447 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:06:13.439 [sao]      WARN  [sao] web: POST ours failed after 1269 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 4 failed)
++0:06:19.427 [sao]      STATE web       github 2/2 ok, 979 ms avg | ours 0/4 ok, 1141 ms avg, last error: HTTP 401 HTTP 401 | relay 14/14 ok, 792 ms avg
++0:06:19.429 [sao]      STATE input     input to the game, 1 resets (last: closed), keys synced: 0 pressed, 0 let go; controls: free
++0:06:19.430 [sao]      STATE relay     ready, UDP port 7790, rtt 293 ms (best 289), 0 reconnects, sent 211 / received 2480
++0:06:19.430 [sao]      STATE direct    minigames/taxi: socket closed, public address not found, 0 line(s)
++0:06:19.430 [sao]      STATE memory    memory 814 MB free of 2047 (biggest block 307 MB)
++0:06:19.430 [sao]      STATE threads   15 made in a coroutine, 15 by 1 factory(ies), installed assigned
++0:06:19.430 [sao]      STATE phone     closed, app -, size 3, text 2, memory level ok
++0:06:19.430 [sao]      STATE facetime  no call
++0:06:19.432 [sao]      STATE screens   0 screen(s) playing; YouTube not tried yet; failures 0; game volume: sfx 64, radio 64 of 64; BASS global: streams 10000, samples 10000 of 10000; my screens volume 0.80
++0:06:19.432 [sao]      STATE music     speakers: hearing others: on; boombox player#ee25 not near, one source: car plays it
++0:06:19.432 [sao]      STATE street    street life: around you 0 peds, 0 cars | ours 0 / 17 peds (single-player budget), 0 / 12 cars | spawned 0 peds, 0 cars; sync sync v2: 0 messages / 0 records sent, 0 received, 0 puppets shown, 0 area rooms, hits 0 sent / 0 taken; copies: 0 peds on foot (0 moving), 0 cars (0 driven, 0 bikes), 0 passengers, 0 fading in; net street life is off (Settings > World)
++0:06:19.434 [sao]      STATE stream guard installed (stub 2A050000); empty music tracks caught: 0
++0:06:19.434 [sao]      STATE raceworld race world: off, 0 player(s) of other race worlds hidden here
++0:06:19.434 [sao]      STATE missionworld mission world: off, 0 player(s) of other mission worlds hidden here
++0:06:19.434 [sao]      STATE setup     done
++0:06:19.442 [sao]      PERF  117 fps, worst frame 22 ms, 0 freezes, Lua 26.8 MB, streaming 92 MB (phone closed, memory 814 MB free of 2047 (biggest block 307 MB)) | mod 0.99 ms/frame: street life 0.23, guards 0.19, service + logs 0.16, phone 0.16, interactions 0.12, menu drawing 0.08
++0:06:19.451 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:06:25.990 [sao]      INFO  [sao] speakers: boombox of player#fb67: off
++0:07:15.345 [sao]      GLTCH a frame took 38242 ms (phone closed, memory 813 MB free of 2047 (biggest block 307 MB)); the mod: 9.4 ms of it (not the mod)
++0:07:16.353 [sao]      INFO  [sao] portrait: 0 worn object(s)
++0:07:19.451 [sao]      PERF  42 fps, worst frame 38242 ms, 1 freezes, Lua 46.7 MB, streaming 92 MB (phone closed, memory 762 MB free of 2047 (biggest block 307 MB)) | mod 0.96 ms/frame: street life 0.23, guards 0.20, service + logs 0.17, phone 0.16, interactions 0.12, network 0.05
++0:07:19.451 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:07:44.276 [sao]      WARN  [sao] web: POST ours failed after 2031 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 5 failed)
++0:07:53.490 [sao]      INFO  [sao] speakers: boombox of player#ee25: off
++0:08:16.620 [sao]      INFO  [sao] portrait: 1 worn object(s)
++0:08:19.459 [sao]      PERF  113 fps, worst frame 168 ms, 0 freezes, Lua 43.9 MB, streaming 93 MB (phone closed, memory 798 MB free of 2047 (biggest block 307 MB)) | mod 0.99 ms/frame: street life 0.26, guards 0.20, phone 0.17, service + logs 0.17, interactions 0.13, network 0.06
++0:08:19.461 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:09:14.076 [sao]      WARN  [sao] web: POST ours failed after 1782 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 6 failed)
++0:09:19.460 [sao]      PERF  110 fps, worst frame 80 ms, 0 freezes, Lua 35.6 MB, streaming 95 MB (phone closed, memory 798 MB free of 2047 (biggest block 307 MB)) | mod 0.98 ms/frame: street life 0.26, guards 0.19, service + logs 0.16, phone 0.16, interactions 0.13, network 0.06
++0:09:19.461 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:09:45.012 [sao]      INFO  [sao] portrait: 4 worn object(s)
++0:10:18.741 [sao]      GLTCH a frame took 334 ms (phone closed, memory 779 MB free of 2047 (biggest block 307 MB)); the mod: 1.4 ms of it (not the mod)
++0:10:19.467 [sao]      PERF  112 fps, worst frame 334 ms, 1 freezes, Lua 28.3 MB, streaming 95 MB (phone closed, memory 774 MB free of 2047 (biggest block 307 MB)) | mod 1.02 ms/frame: street life 0.25, service + logs 0.21, guards 0.20, phone 0.16, interactions 0.13, network 0.06 | screen: 4 tag place(s) at the camera left out
++0:10:19.469 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:10:43.505 [sao]      WARN  [sao] web: POST ours failed after 1027 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 7 failed)
++0:10:45.278 [sao]      INFO  [sao] portrait: 1 worn object(s)
++0:11:19.431 [sao]      STATE web       github 4/4 ok, 953 ms avg | ours 0/7 ok, 1343 ms avg, last error: HTTP 401 HTTP 401 | relay 18/18 ok, 808 ms avg
++0:11:19.433 [sao]      STATE input     input to the game, 1 resets (last: closed), keys synced: 0 pressed, 0 let go; controls: free
++0:11:19.433 [sao]      STATE relay     ready, UDP port 7790, rtt 546 ms (best 307), 0 reconnects, sent 355 / received 4406
++0:11:19.435 [sao]      STATE direct    minigames/taxi: socket closed, public address not found, 0 line(s)
++0:11:19.435 [sao]      STATE memory    memory 783 MB free of 2047 (biggest block 307 MB)
++0:11:19.435 [sao]      STATE threads   19 made in a coroutine, 19 by 1 factory(ies), installed assigned
++0:11:19.435 [sao]      STATE phone     closed, app -, size 3, text 2, memory level ok
++0:11:19.436 [sao]      STATE facetime  no call
++0:11:19.436 [sao]      STATE screens   0 screen(s) playing; YouTube not tried yet; failures 0; game volume: sfx 64, radio 64 of 64; BASS global: streams 10000, samples 10000 of 10000; my screens volume 0.80
++0:11:19.436 [sao]      STATE music     speakers: hearing others: on; boombox player#fb67 not near, off; boombox player#ee25 not near, off
++0:11:19.437 [sao]      STATE street    street life: around you 0 peds, 0 cars | ours 0 / 17 peds (single-player budget), 0 / 12 cars | spawned 0 peds, 0 cars; sync sync v2: 0 messages / 0 records sent, 0 received, 0 puppets shown, 0 area rooms, hits 0 sent / 0 taken; copies: 0 peds on foot (0 moving), 0 cars (0 driven, 0 bikes), 0 passengers, 0 fading in; net street life is off (Settings > World)
++0:11:19.437 [sao]      STATE stream guard installed (stub 2A050000); empty music tracks caught: 0
++0:11:19.437 [sao]      STATE raceworld race world: off, 0 player(s) of other race worlds hidden here
++0:11:19.437 [sao]      STATE missionworld mission world: off, 0 player(s) of other mission worlds hidden here
++0:11:19.437 [sao]      STATE setup     done
++0:11:19.485 [sao]      PERF  96 fps, worst frame 33 ms, 0 freezes, Lua 45.7 MB, streaming 95 MB (phone closed, memory 783 MB free of 2047 (biggest block 307 MB)) | mod 1.03 ms/frame: street life 0.27, guards 0.20, phone 0.19, service + logs 0.17, interactions 0.13, network 0.06
++0:11:19.486 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:12:14.240 [sao]      WARN  [sao] web: POST ours failed after 1524 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 8 failed)
++0:12:19.490 [sao]      PERF  101 fps, worst frame 34 ms, 0 freezes, Lua 38.8 MB, streaming 95 MB (phone closed, memory 781 MB free of 2047 (biggest block 307 MB)) | mod 1.03 ms/frame: street life 0.29, guards 0.20, phone 0.19, service + logs 0.16, interactions 0.13, network 0.06
++0:12:19.493 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:12:52.041 [sao]      GLTCH a frame took 20481 ms (phone closed, memory 781 MB free of 2047 (biggest block 307 MB)); the mod: 10.1 ms of it (not the mod)
++0:13:19.494 [sao]      PERF  76 fps, worst frame 20481 ms, 1 freezes, Lua 48.8 MB, streaming 96 MB (phone closed, memory 740 MB free of 2047 (biggest block 307 MB)) | mod 1.01 ms/frame: street life 0.27, guards 0.19, phone 0.19, service + logs 0.16, interactions 0.12, network 0.06
++0:13:19.498 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:13:22.866 [sao]      INFO  [sao] uif: asked /stats (typed /fr)
++0:13:25.180 [sao]      INFO  [sao] portrait: 0 worn object(s)
++0:13:44.332 [sao]      WARN  [sao] web: POST ours failed after 1524 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 9 failed)
++0:14:19.503 [sao]      PERF  112 fps, worst frame 27 ms, 0 freezes, Lua 43.2 MB, streaming 95 MB (phone closed, memory 745 MB free of 2047 (biggest block 307 MB)) | mod 1.00 ms/frame: street life 0.25, guards 0.19, phone 0.19, service + logs 0.15, interactions 0.13, network 0.06 | screen: 82 tag place(s) at the camera left out
++0:14:19.507 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:14:25.803 [sao]      INFO  [sao] uif: asked /stats (weapons reset)
++0:14:27.408 [sao]      INFO  [sao] portrait: 1 worn object(s)
++0:15:14.791 [sao]      WARN  [sao] web: POST ours failed after 1771 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 10 failed)
++0:15:19.515 [sao]      PERF  108 fps, worst frame 60 ms, 0 freezes, Lua 27.6 MB, streaming 96 MB (phone closed, memory 745 MB free of 2047 (biggest block 307 MB)) | mod 1.08 ms/frame: street life 0.25, guards 0.19, phone 0.19, service + logs 0.15, interactions 0.15, menu drawing 0.09
++0:15:19.517 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:16:19.431 [sao]      STATE web       github 4/4 ok, 953 ms avg | ours 0/10 ok, 1422 ms avg, last error: HTTP 401 HTTP 401 | relay 21/21 ok, 899 ms avg
++0:16:19.433 [sao]      STATE input     input to the game, 1 resets (last: closed), keys synced: 0 pressed, 0 let go; controls: free
++0:16:19.433 [sao]      STATE relay     ready, UDP port 7790, rtt 614 ms (best 294), 0 reconnects, sent 512 / received 6308
++0:16:19.435 [sao]      STATE direct    minigames/taxi: socket closed, public address not found, 0 line(s)
++0:16:19.435 [sao]      STATE memory    memory 731 MB free of 2047 (biggest block 307 MB)
++0:16:19.436 [sao]      STATE threads   22 made in a coroutine, 22 by 1 factory(ies), installed assigned
++0:16:19.436 [sao]      STATE phone     closed, app -, size 3, text 2, memory level ok
++0:16:19.436 [sao]      STATE facetime  no call
++0:16:19.437 [sao]      STATE screens   0 screen(s) playing; YouTube not tried yet; failures 0; game volume: sfx 64, radio 64 of 64; BASS global: streams 10000, samples 10000 of 10000; my screens volume 0.80
++0:16:19.437 [sao]      STATE music     speakers: hearing others: on; boombox player#fb67 not near, off; boombox player#ee25 not near, off
++0:16:19.437 [sao]      STATE street    street life: around you 0 peds, 0 cars | ours 0 / 17 peds (single-player budget), 0 / 12 cars | spawned 0 peds, 0 cars; sync sync v2: 0 messages / 0 records sent, 0 received, 0 puppets shown, 0 area rooms, hits 0 sent / 0 taken; copies: 0 peds on foot (0 moving), 0 cars (0 driven, 0 bikes), 0 passengers, 0 fading in; net street life is off (Settings > World)
++0:16:19.438 [sao]      STATE stream guard installed (stub 2A050000); empty music tracks caught: 0
++0:16:19.438 [sao]      STATE raceworld race world: off, 0 player(s) of other race worlds hidden here
++0:16:19.438 [sao]      STATE missionworld mission world: off, 0 player(s) of other mission worlds hidden here
++0:16:19.440 [sao]      STATE setup     done
++0:16:19.519 [sao]      PERF  98 fps, worst frame 66 ms, 0 freezes, Lua 44.5 MB, streaming 96 MB (phone closed, memory 731 MB free of 2047 (biggest block 307 MB)) | mod 1.03 ms/frame: street life 0.25, guards 0.20, phone 0.18, service + logs 0.15, interactions 0.15, network 0.06
++0:16:19.519 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:16:44.625 [sao]      WARN  [sao] web: POST ours failed after 1517 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 11 failed)
++0:17:19.526 [sao]      PERF  103 fps, worst frame 30 ms, 0 freezes, Lua 33.9 MB, streaming 96 MB (phone closed, memory 727 MB free of 2047 (biggest block 307 MB)) | mod 1.10 ms/frame: street life 0.25, guards 0.19, phone 0.19, service + logs 0.15, interactions 0.15, menu drawing 0.12
++0:17:19.528 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:18:16.710 [sao]      WARN  [sao] web: POST ours failed after 3570 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 12 failed)
++0:18:19.530 [sao]      PERF  110 fps, worst frame 43 ms, 0 freezes, Lua 31.8 MB, streaming 96 MB (phone closed, memory 729 MB free of 2047 (biggest block 307 MB)) | mod 0.99 ms/frame: street life 0.25, guards 0.19, phone 0.18, service + logs 0.15, interactions 0.14, network 0.05
++0:18:19.533 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:18:32.502 [sao]      INFO  [sao] portrait: 8 worn object(s)
++0:19:19.537 [sao]      PERF  110 fps, worst frame 28 ms, 0 freezes, Lua 30.3 MB, streaming 96 MB (phone closed, memory 729 MB free of 2047 (biggest block 307 MB)) | mod 1.00 ms/frame: street life 0.25, guards 0.19, phone 0.18, service + logs 0.15, interactions 0.14, network 0.06 | screen: 5 tag place(s) at the camera left out
++0:19:19.543 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:19:32.756 [sao]      INFO  [sao] portrait: 1 worn object(s)
++0:19:45.198 [sao]      WARN  [sao] web: POST ours failed after 2031 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 13 failed)
++0:20:19.545 [sao]      PERF  110 fps, worst frame 47 ms, 0 freezes, Lua 34.1 MB, streaming 96 MB (phone closed, memory 728 MB free of 2047 (biggest block 307 MB)) | mod 0.97 ms/frame: street life 0.25, guards 0.19, phone 0.18, service + logs 0.16, interactions 0.13, network 0.06
++0:20:19.548 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:20:20.800 [sao]      GLTCH a frame took 337 ms (phone closed, memory 728 MB free of 2047 (biggest block 307 MB)); the mod: 1.4 ms of it (not the mod)
++0:21:15.393 [sao]      WARN  [sao] web: POST ours failed after 2019 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 14 failed)
++0:21:19.431 [sao]      STATE web       github 6/6 ok, 1287 ms avg | ours 0/14 ok, 1668 ms avg, last error: HTTP 401 HTTP 401 | relay 25/25 ok, 970 ms avg
++0:21:19.432 [sao]      STATE input     input to the game, 1 resets (last: closed), keys synced: 0 pressed, 0 let go; controls: free
++0:21:19.432 [sao]      STATE relay     ready, UDP port 7790, rtt 520 ms (best 334), 0 reconnects, sent 695 / received 7866
++0:21:19.432 [sao]      STATE direct    minigames/taxi: socket closed, public address not found, 0 line(s)
++0:21:19.432 [sao]      STATE memory    memory 727 MB free of 2047 (biggest block 307 MB)
++0:21:19.432 [sao]      STATE threads   27 made in a coroutine, 27 by 1 factory(ies), installed assigned
++0:21:19.432 [sao]      STATE phone     closed, app -, size 3, text 2, memory level ok
++0:21:19.433 [sao]      STATE facetime  no call
++0:21:19.433 [sao]      STATE screens   0 screen(s) playing; YouTube not tried yet; failures 0; game volume: sfx 64, radio 64 of 64; BASS global: streams 10000, samples 10000 of 10000; my screens volume 0.80
++0:21:19.433 [sao]      STATE music     speakers: hearing others: on; boombox player#fb67 not near, off
++0:21:19.434 [sao]      STATE street    street life: around you 0 peds, 0 cars | ours 0 / 17 peds (single-player budget), 0 / 12 cars | spawned 0 peds, 0 cars; sync sync v2: 0 messages / 0 records sent, 0 received, 0 puppets shown, 0 area rooms, hits 0 sent / 0 taken; copies: 0 peds on foot (0 moving), 0 cars (0 driven, 0 bikes), 0 passengers, 0 fading in; net street life is off (Settings > World)
++0:21:19.434 [sao]      STATE stream guard installed (stub 2A050000); empty music tracks caught: 0
++0:21:19.435 [sao]      STATE raceworld race world: off, 0 player(s) of other race worlds hidden here
++0:21:19.435 [sao]      STATE missionworld mission world: off, 0 player(s) of other mission worlds hidden here
++0:21:19.435 [sao]      STATE setup     done
++0:21:19.549 [sao]      PERF  103 fps, worst frame 337 ms, 1 freezes, Lua 48.6 MB, streaming 96 MB (phone closed, memory 727 MB free of 2047 (biggest block 307 MB)) | mod 1.07 ms/frame: street life 0.23, service + logs 0.21, guards 0.19, phone 0.17, interactions 0.12, menu drawing 0.09 | screen: 5 tag place(s) at the camera left out
++0:21:19.550 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:22:19.550 [sao]      PERF  110 fps, worst frame 26 ms, 0 freezes, Lua 48.1 MB, streaming 97 MB (phone closed, memory 728 MB free of 2047 (biggest block 307 MB)) | mod 1.01 ms/frame: street life 0.25, guards 0.20, phone 0.17, service + logs 0.15, interactions 0.12, menu drawing 0.06 | screen: 3 tag place(s) at the camera left out
++0:22:19.554 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:22:45.903 [sao]      WARN  [sao] web: POST ours failed after 2307 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 15 failed)
++0:23:19.558 [sao]      PERF  95 fps, worst frame 157 ms, 0 freezes, Lua 44.7 MB, streaming 97 MB (phone closed, memory 728 MB free of 2047 (biggest block 307 MB)) | mod 1.06 ms/frame: street life 0.25, guards 0.20, phone 0.18, service + logs 0.16, interactions 0.13, menu drawing 0.09 | screen: 3 tag place(s) at the camera left out
++0:23:19.562 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:24:15.217 [sao]      WARN  [sao] web: POST ours failed after 1542 ms - HTTP 401 (HTTP 401) (this host: 0 ok, 16 failed)
++0:24:19.563 [sao]      PERF  92 fps, worst frame 65 ms, 0 freezes, Lua 48.1 MB, streaming 97 MB (phone closed, memory 728 MB free of 2047 (biggest block 307 MB)) | mod 1.24 ms/frame: street life 0.25, phone 0.21, guards 0.20, service + logs 0.16, interactions 0.13, menu drawing 0.13
++0:24:19.564 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
++0:25:10.439 [sao]      INFO  [sao] portrait: 0 worn object(s)
++0:25:19.566 [sao]      PERF  90 fps, worst frame 218 ms, 0 freezes, Lua 42.9 MB, streaming 98 MB (phone closed, memory 730 MB free of 2047 (biggest block 307 MB)) | mod 1.15 ms/frame: street life 0.27, guards 0.21, phone 0.19, service + logs 0.16, interactions 0.14, menu drawing 0.11 | screen: 11 tag place(s) at the camera left out
++0:25:19.567 [sao]      INFO  [sao] entities: 0 peds, 0 vehicles, 0 objects (caps 90/50/260); 0 refused, 0 leaks removed
