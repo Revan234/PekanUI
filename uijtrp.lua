@@ -2004,6 +2004,43 @@ local function toggleRadial()
     radialOpen[0] = true
 end
 
+local updaterDownloadSound
+local updaterDownloadSoundWarned = false
+
+local function playUpdaterDownloadSound()
+    if not updaterDownloadSound then
+        local soundPath = phoneSoundDirectory .. "\\notify.wav"
+        if type(doesFileExist) ~= "function" or not doesFileExist(soundPath) then
+            if not updaterDownloadSoundWarned then
+                updaterDownloadSoundWarned = true
+                print("[PBRP Updater] Suara notifikasi tidak ditemukan: " .. soundPath)
+            end
+            return false
+        end
+
+        local loaded, stream = pcall(loadAudioStream, soundPath)
+        if not loaded or not stream or stream == 0 then
+            if not updaterDownloadSoundWarned then
+                updaterDownloadSoundWarned = true
+                print("[PBRP Updater] Gagal memuat suara notifikasi: " .. tostring(stream))
+            end
+            return false
+        end
+        updaterDownloadSound = stream
+    end
+
+    local ok, err = pcall(function()
+        setAudioStreamVolume(updaterDownloadSound, 0.6)
+        setAudioStreamState(updaterDownloadSound, 0)
+        setAudioStreamState(updaterDownloadSound, 1)
+    end)
+    if not ok and not updaterDownloadSoundWarned then
+        updaterDownloadSoundWarned = true
+        print("[PBRP Updater] Gagal memutar suara notifikasi: " .. tostring(err))
+    end
+    return ok
+end
+
 local function updaterNotice(message)
     local text = "[PBRP Updater] " .. tostring(message)
     print(text)
@@ -2199,6 +2236,7 @@ local function checkForGithubUpdate()
     updateStatus.completed = 0
     updateStatus.total = #files
     local staged, stagedPaths = {}, {}
+    local downloadSoundPlayed = false
     for index, relativePath in ipairs(files) do
         local localPath = relativePath:gsub("/", "\\")
         local destination = scriptDirectory .. "\\" .. localPath
@@ -2208,6 +2246,10 @@ local function checkForGithubUpdate()
 
         updateStatus.currentBytes = 0
         setUpdaterStatus("Mengunduh file", string.format("%d/%d  %s", index, #files, relativePath))
+        if not downloadSoundPlayed then
+            playUpdaterDownloadSound()
+            downloadSoundPlayed = true
+        end
         os.remove(temporary)
         downloaded, downloadError = downloadUpdaterFile(sourceUrl, temporary)
         if not downloaded then
