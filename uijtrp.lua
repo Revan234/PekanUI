@@ -2402,14 +2402,15 @@ end
 
 local function isAllowedUpdaterPath(relativePath)
     if relativePath == "uijtrp.lua" then return true end
-    if relativePath:sub(1, 7) ~= "uijtrp/" or relativePath:find("\\", 1, true)
+    local normalizedPath = relativePath:lower()
+    if normalizedPath:sub(1, 7) ~= "uijtrp/" or relativePath:find("\\", 1, true)
         or relativePath:find("//", 1, true) or relativePath:find(":", 1, true)
         or not relativePath:match("^[%w_%.%-/]+$") then
         return false
     end
 
     local segments = {}
-    for segment in relativePath:gmatch("[^/]+") do
+    for segment in normalizedPath:gmatch("[^/]+") do
         if segment == "." or segment == ".." or segment:sub(1, 1) == "." then
             return false
         end
@@ -2419,8 +2420,65 @@ local function isAllowedUpdaterPath(relativePath)
 
     local extension = segments[#segments]:match("%.([%w]+)$")
     if not extension then return false end
+    if extension == "lua" then return true end
+
+    for _, segment in ipairs(segments) do
+        if segment:find("notif", 1, true)
+            or segment:find("notify", 1, true)
+            or segment:find("ringtone", 1, true)
+            or (segment:find("logo", 1, true) and segment:find("frame", 1, true)) then
+            return false
+        end
+    end
+
+    local allowedAssetExtensions = {
+        bmp = true,
+        gif = true,
+        jpeg = true,
+        jpg = true,
+        m4a = true,
+        mp3 = true,
+        ogg = true,
+        png = true,
+        webp = true,
+        wav = true,
+    }
+    return allowedAssetExtensions[extension] == true
+end
+
+local function isValidUpdaterAsset(relativePath, content)
+    local extension = relativePath:match("%.([%w]+)$")
+    if not extension then return false, "ekstensi aset tidak valid" end
     extension = extension:lower()
-    return extension == "lua"
+
+    local valid = false
+    if extension == "png" then
+        valid = content:sub(1, 8) == "\137PNG\r\n\26\n"
+    elseif extension == "jpg" or extension == "jpeg" then
+        valid = content:sub(1, 3) == "\255\216\255"
+    elseif extension == "gif" then
+        valid = content:sub(1, 6) == "GIF87a" or content:sub(1, 6) == "GIF89a"
+            or content:sub(1, 8) == "\137PNG\r\n\26\n"
+    elseif extension == "bmp" then
+        valid = content:sub(1, 2) == "BM"
+    elseif extension == "webp" then
+        valid = content:sub(1, 4) == "RIFF" and content:sub(9, 12) == "WEBP"
+    elseif extension == "wav" then
+        valid = content:sub(1, 4) == "RIFF" and content:sub(9, 12) == "WAVE"
+    elseif extension == "mp3" then
+        local first, second = content:byte(1, 2)
+        valid = content:sub(1, 3) == "ID3"
+            or (first == 255 and second and second >= 224)
+    elseif extension == "ogg" then
+        valid = content:sub(1, 4) == "OggS"
+    elseif extension == "m4a" then
+        valid = content:sub(5, 8) == "ftyp"
+    end
+
+    if not valid then
+        return false, "isi bukan file " .. extension .. " yang valid"
+    end
+    return true
 end
 
 local function ensureUpdaterParentDirectory(relativePath)
@@ -2543,6 +2601,9 @@ local function checkForGithubUpdate()
             if not needsRepair and relativePath:lower():match("%.lua$") then
                 local compiled = loadfile(destination)
                 needsRepair = compiled == nil
+            elseif not needsRepair then
+                local validAsset = isValidUpdaterAsset(relativePath, content)
+                needsRepair = not validAsset
             end
             if needsRepair then
                 repairFiles[#repairFiles + 1] = relativePath
@@ -2583,9 +2644,12 @@ local function checkForGithubUpdate()
             downloadSoundPlayed = true
         end
         os.remove(temporary)
-        downloaded, downloadError = downloadUpdaterFile(sourceUrl, temporary, function(path)
-            local compiled, compileError = loadfile(path)
-            return compiled ~= nil, compileError
+        downloaded, downloadError = downloadUpdaterFile(sourceUrl, temporary, function(path, content)
+            if relativePath:lower():match("%.lua$") then
+                local compiled, compileError = loadfile(path)
+                return compiled ~= nil, compileError
+            end
+            return isValidUpdaterAsset(relativePath, content)
         end, { cdnPrefix .. relativePath })
         if not downloaded then
             removeUpdaterFiles(stagedPaths)

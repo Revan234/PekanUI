@@ -6,11 +6,14 @@ selama tetap terhubung. Port tidak diperiksa. Server lain tidak memicu unduhan.
 
 Untuk merilis perubahan:
 
-1. Unggah `uijtrp.lua`, folder `uijtrp` (modul Lua yang ingin diperbarui),
+1. Unggah `uijtrp.lua`, folder `uijtrp` (modul dan aset yang ingin diperbarui),
    dan `update-manifest.txt` ke root repo GitHub.
-2. Cantumkan setiap file Lua satu per baris di `update-manifest.txt`, menggunakan
-   path relatif dari root repo. Updater hanya menerima `uijtrp.lua` dan file
-   `.lua` di dalam folder `uijtrp`; gambar dan audio tidak ikut diperbarui.
+2. Cantumkan setiap file yang ingin diperbarui satu per baris di
+   `update-manifest.txt`, menggunakan path relatif dari root repo. Updater
+   menerima `uijtrp.lua`, file `.lua`, serta gambar (`.png`, `.jpg`, `.jpeg`,
+   `.gif`, `.bmp`, `.webp`) dan audio (`.wav`, `.mp3`, `.ogg`, `.m4a`) di dalam
+   folder `uijtrp`. Path di `uijtrp/assets/logo_frames` dan aset notify/notif
+   serta ringtone tidak boleh dimasukkan dan akan ditolak updater.
 3. Commit perubahan ke branch `main`.
 4. Saat pengguna masuk/tersambung kembali ke server PekanBaru dan setiap
    pemeriksaan berkala, updater mengambil commit terbaru. Jika ada perubahan,
@@ -19,8 +22,10 @@ Untuk merilis perubahan:
    selesai, dan ukuran unduhan aktif. Script dimuat ulang otomatis setelah
    update berhasil.
 
-Updater hanya mengizinkan `uijtrp.lua` dan file `.lua` di dalam folder `uijtrp`;
-path absolut dan traversal folder ditolak. File Lua divalidasi sintaksnya.
+Updater hanya mengizinkan `uijtrp.lua` serta file Lua, gambar, dan audio di
+dalam folder `uijtrp`; path absolut, traversal folder, logo frames, serta aset
+notify/notif dan ringtone ditolak. File Lua divalidasi sintaksnya; file gambar
+dan audio dipasang sebagai data biner.
 Unduhan dicoba ulang dan memakai GitHub CDN sebagai jalur cadangan. Jika semua
 jalur gagal, file yang sedang dipakai tidak diganti dan pemeriksaan dicoba lagi
 setelah 30 detik selama tetap berada di server PekanBaru. Jika repo privat,

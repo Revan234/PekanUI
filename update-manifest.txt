@@ -20,3 +20,13 @@ uijtrp/vehicles_ui.lua
 uijtrp/vipruby_ui.lua
 uijtrp/interaction_ui.lua
 uijtrp/mechanic_service_ui.lua
+# Images and sounds update with the UI; logo frames and notify/ringtone assets are excluded.
+uijtrp/assets/jtrp_loading.png
+uijtrp/assets/pbrp-logo.gif
+uijtrp/assets/pbrp-logo.png
+uijtrp/assets/pekanorganiz.png
+uijtrp/assets/sound/f2383602-54e8-4e0b-b171-eec9722a328f.wav
+uijtrp/assets/sound/vehicle_siren_1.mp3
+uijtrp/assets/sound/vehicle_siren_2.mp3
+uijtrp/assets/sound/vehicle_siren_3.mp3
+uijtrp/jtrp_phone/vibrate.wav
