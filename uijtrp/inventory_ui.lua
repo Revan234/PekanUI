@@ -216,6 +216,7 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
     local weight, maxWeight = 0, 50
     local items = {}
     local nearbyPlayers = {}
+    local preferredGiveTarget = nil
     local selectedSlot = nil
     local giveMode = false
     local amount = imgui.new.int(1)
@@ -446,6 +447,14 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
         selectedSlot = nil
         giveMode = false
         dirty = true
+    end
+
+    local function openForPlayer(targetId)
+        targetId = tonumber(targetId)
+        if not targetId or targetId < 0 then return false end
+        preferredGiveTarget = targetId
+        sendChat("/rpui_inventory_data")
+        return true
     end
 
     -- dipanggil dari hook samp.events (atau manual dari script utama)
@@ -714,6 +723,7 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
             selectedSlot = nil
             giveMode = false
             items = {}
+            preferredGiveTarget = nil
             return true
         end
         if text == "@PBRPUI:INV:PLAYERS:BEGIN" then
@@ -722,13 +732,17 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
         end
         local playerId, playerName = text:match("^@PBRPUI:INV:PLAYER:(%d+):(.+)$")
         if playerId then
-            nearbyPlayers[#nearbyPlayers + 1] = {
-                id = tonumber(playerId),
-                name = playerName,
-            }
+            local parsedId = tonumber(playerId)
+            if not preferredGiveTarget or parsedId == preferredGiveTarget then
+                nearbyPlayers[#nearbyPlayers + 1] = {
+                    id = parsedId,
+                    name = playerName,
+                }
+            end
             return true
         end
         if text == "@PBRPUI:INV:PLAYERS:END" then
+            preferredGiveTarget = nil
             return true
         end
 
@@ -1259,6 +1273,7 @@ return function(imgui, icons, V2, color, accent, getAccent, sendChat, uiSounds, 
     return {
         config = CFG,
         open = show,
+        openForPlayer = openForPlayer,
         close = close,
         demo = loadDemo,
         dump = dumpTextdraws,

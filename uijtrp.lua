@@ -371,6 +371,9 @@ local phoneUI = loadFactory("uijtrp.phone_ui", stubModule(),
 local inventoryUI = loadFactory("uijtrp.inventory_ui", stubModule(),
     imgui, icons, V2, col, colA, getAccent,
     sendCommand, uiSounds, isPlayerUiReady)
+local interactionUI = loadFactory("uijtrp.interaction_ui", stubModule({
+    update = noop, isOpen = function() return false end,
+}), imgui, V2, col, sendCommand, inventoryUI, isPlayerUiReady)
 local vehiclesUI = loadFactory("uijtrp.vehicles_ui", stubModule(),
     imgui, V2, sendCommand, uiSounds, isPlayerUiReady, getAccent)
 local vipRubyUI = loadFactory("uijtrp.vipruby_ui", stubModule(),
@@ -2344,6 +2347,9 @@ function main()
     local function tick()
         local spawned = isSampAvailable() and sampIsLocalPlayerSpawned() and true or false
         playerSpawned = spawned
+        local typing = isSampAvailable() and (sampIsChatInputActive() or sampIsDialogActive())
+        interactionUI.update(spawned and not typing and not menuOpen[0] and not radialOpen[0]
+            and not adminOpen[0] and not isOtherUiOpen())
         if not spawned then
             lastReadyHeartbeat = 0
             adminLevel = -1
@@ -2368,8 +2374,6 @@ function main()
         end
         wasPlayerSpawned = spawned
         if not (isSampAvailable() and isPlayerUiReady()) then return end
-
-        local typing = sampIsChatInputActive() or sampIsDialogActive()
 
         if wasKeyPressed(0x4D) and not typing and not isOtherUiOpen() then
             toggleRadial()
