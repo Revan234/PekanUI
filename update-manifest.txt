@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 uijtrp.lua
 uijtrp/admin_commands.lua
 uijtrp/admin_panel_ui.lua
@@ -18,7 +17,6 @@ uijtrp/ui_sounds.lua
 uijtrp/ui_theme.lua
 uijtrp/vehicles_ui.lua
 uijtrp/vipruby_ui.lua
-=======
 uijtrp.lua
 uijtrp/admin_commands.lua
 uijtrp/admin_panel_ui.lua
@@ -39,4 +37,3 @@ uijtrp/ui_theme.lua
 uijtrp/vehicles_ui.lua
 uijtrp/vipruby_ui.lua
 uijtrp/interaction_ui.lua
->>>>>>> 80e5d3e (Update PekanBaru source)
