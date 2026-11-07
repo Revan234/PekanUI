@@ -19,3 +19,4 @@ uijtrp/ui_theme.lua
 uijtrp/vehicles_ui.lua
 uijtrp/vipruby_ui.lua
 uijtrp/interaction_ui.lua
+uijtrp/mechanic_service_ui.lua

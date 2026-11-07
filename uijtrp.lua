@@ -447,6 +447,10 @@ local factionPanelUI = loadFactory("uijtrp.faction_panel_ui", stubModule({
     onShowDialog = function() return nil end, isOpen = function() return false end,
     close = noop, reset = noop,
 }), imgui, V2, isPlayerUiReady)
+local mechanicServiceUI = loadFactory("uijtrp.mechanic_service_ui", stubModule({
+    onShowDialog = function() return nil end, isOpen = function() return false end,
+    close = noop, reset = noop,
+}), imgui, V2, isPlayerUiReady)
 local notificationUI = loadFactory("uijtrp.notification_ui", stubModule(),
     imgui, V2, isPlayerUiReady, uiSounds)
 notificationUI.setInventoryOwner(inventoryUI.ownsTextdraw)
@@ -486,6 +490,7 @@ chainInventoryTextdrawEvent("onShowTextDraw", vehiclesUI.onShowTextDraw)
 chainInventoryTextdrawEvent("onTextDrawSetString", vehiclesUI.onTextDrawSetString)
 chainInventoryTextdrawEvent("onTextDrawHide", vehiclesUI.onTextDrawHide)
 chainInventoryTextdrawEvent("onShowDialog", factionPanelUI.onShowDialog)
+chainInventoryTextdrawEvent("onShowDialog", mechanicServiceUI.onShowDialog)
 
 local loadingUI = loadFactory("uijtrp.loading_screen", stubModule(),
     imgui, V2, assetDirectory .. "\\jtrp_loading.png",
@@ -2048,7 +2053,7 @@ updaterFrame.HideCursor = true
 local function isOtherUiOpen()
     return phoneUI.isOpen() or inventoryUI.isOpen() or vehiclesUI.isOpen()
         or vipRubyUI.isOpen() or cctvUI.isOpen() or adminPanelUI.isOpen()
-        or factionVehicleUI.isOpen() or factionPanelUI.isOpen()
+        or factionVehicleUI.isOpen() or factionPanelUI.isOpen() or mechanicServiceUI.isOpen()
 end
 
 local function toggleFactionVehicleUi()
@@ -2590,7 +2595,6 @@ function main()
 
     local lastReadyHeartbeat = 0
     local wasPlayerSpawned = false
-    local patchNotesAttempted = false
     local lastObservedServer = nil
     local nextServerCheck = 0
     local nextUpdateCheck = 0
@@ -2612,6 +2616,7 @@ function main()
             adminPanelUI.reset()
             factionVehicleUI.reset()
             factionPanelUI.reset()
+            mechanicServiceUI.reset()
             -- keluar dari spawn / disconnect: pastikan menu tidak menggantung
             menuOpen[0] = false
             radialOpen[0] = false
@@ -2619,10 +2624,6 @@ function main()
         else
             if not wasPlayerSpawned then
                 loadingUI.finishConnection()
-                if not patchNotesAttempted then
-                    notificationUI.showPatchNotes()
-                    patchNotesAttempted = true
-                end
             end
             if not wasPlayerSpawned or os.time() - lastReadyHeartbeat >= 10 then
                 sampSendChat("/rpui_client_ready 2")
@@ -2654,6 +2655,8 @@ function main()
         end
         if wasKeyPressed(0x1B) and factionPanelUI.isOpen() then
             factionPanelUI.close()
+        elseif wasKeyPressed(0x1B) and mechanicServiceUI.isOpen() then
+            mechanicServiceUI.close()
         elseif wasKeyPressed(0x1B) and not typing then
             if phoneUI.isOpen() then
                 phoneUI.close()
@@ -2665,6 +2668,8 @@ function main()
                 factionVehicleUI.toggle()
             elseif factionPanelUI.isOpen() then
                 factionPanelUI.reset()
+            elseif mechanicServiceUI.isOpen() then
+                mechanicServiceUI.close()
             elseif vipRubyUI.isOpen() then
                 vipRubyUI.close()
             elseif radialOpen[0] then

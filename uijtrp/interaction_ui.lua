@@ -200,7 +200,7 @@ return function(imgui, V2, color, sendChat, inventoryUI, isPlayerUiReady)
         if not state.menuOpen or not target then return end
 
         local isPlayer = target.kind == "player"
-        local width, height = isPlayer and 330 or 310, isPlayer and 445 or 310
+        local width, height = isPlayer and 330 or 310, isPlayer and 445 or 360
         local x = math.max(12, math.min(display.x - width - 12, target.screenX + 18))
         local y = math.max(12, math.min(display.y - height - 12, target.screenY - 20))
         imgui.SetNextWindowPos(V2(x, y), imgui.Cond.Always)
@@ -262,6 +262,11 @@ return function(imgui, V2, color, sendChat, inventoryUI, isPlayerUiReady)
             end
         else
             imgui.TextDisabled("AKSES KENDARAAN")
+            if drawActionButton("MULAI SERVICE BENGKEL", "context_service", 40) then
+                sendChat("/service")
+                state.menuOpen = false
+                state.menuTarget = nil
+            end
             if drawActionButton("BUKA / TUTUP HOOD", "context_hood", 40) then
                 sendChat("/rpui_vehicle hood " .. target.id)
                 state.menuOpen = false
