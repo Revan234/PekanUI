@@ -29,6 +29,24 @@ return function(imgui, V2, isPlayerUiReady)
             :gsub("%s+$", "")
     end
 
+    local function pushId(id)
+        if type(id) == "number" then
+            if imgui.PushIDInt then
+                imgui.PushIDInt(id)
+                return
+            end
+        elseif type(id) == "string" then
+            if imgui.PushIDStr then
+                imgui.PushIDStr(id)
+                return
+            end
+        end
+
+        if imgui.PushID then
+            imgui.PushID(tostring(id))
+        end
+    end
+
     local function reset()
         dialogId, items, open = nil, {}, false
         if frame then frame.HideCursor = true end
@@ -130,7 +148,7 @@ return function(imgui, V2, isPlayerUiReady)
         local cardWidth = (available - spacing * (columns - 1)) / columns
         for index, item in ipairs(items) do
             if (index - 1) % columns ~= 0 then imgui.SameLine(0, spacing) end
-            imgui.PushID(index)
+            pushId(index)
             imgui.PushStyleColor(imgui.Col.Button, P.card)
             imgui.PushStyleColor(imgui.Col.ButtonHovered, P.cardHover)
             imgui.PushStyleColor(imgui.Col.ButtonActive, P.red)
@@ -148,7 +166,7 @@ return function(imgui, V2, isPlayerUiReady)
                 item.requirement ~= "" and item.requirement or "Layanan mekanik")
             imgui.PopStyleVar()
             imgui.PopStyleColor(4)
-            imgui.PopID()
+            if imgui.PopID then imgui.PopID() end
             if clicked then
                 respond(1, index - 1)
                 break

@@ -134,7 +134,13 @@ return function(imgui, V2, isPlayerUiReady)
         local cardWidth = (imgui.GetContentRegionAvail().x - spacing) / 2
         for index, label in ipairs(items) do
             if index % 2 == 0 then imgui.SameLine(0, spacing) end
-            imgui.PushID(index)
+            if imgui.PushIDInt then
+                imgui.PushIDInt(index)
+            elseif imgui.PushIDStr then
+                imgui.PushIDStr(tostring(index))
+            elseif imgui.PushID then
+                imgui.PushID(tostring(index))
+            end
             imgui.PushStyleColor(imgui.Col.Button, P.card)
             imgui.PushStyleColor(imgui.Col.ButtonHovered, P.cardHover)
             imgui.PushStyleColor(imgui.Col.ButtonActive, P.red)
@@ -145,7 +151,7 @@ return function(imgui, V2, isPlayerUiReady)
             end
             imgui.PopStyleVar()
             imgui.PopStyleColor(4)
-            imgui.PopID()
+            if imgui.PopID then imgui.PopID() end
         end
         imgui.EndChild()
         imgui.End()
