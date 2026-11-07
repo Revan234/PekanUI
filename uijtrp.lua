@@ -63,6 +63,23 @@ do
 end
 
 local scriptDirectory = thisScript().path:match("^(.*)[\\/]")
+local UPDATE_CONFIG = {
+    owner = "Revan234",
+    repository = "PekanUI",
+    branch = "main",
+    serverIp = "43.173.14.35",
+    checkIntervalSeconds = 300,
+}
+local updateStatus = {
+    active = false,
+    title = "",
+    detail = "",
+    completed = 0,
+    total = 0,
+    currentBytes = 0,
+    finishedAt = 0,
+}
+
 if scriptDirectory then
     local bundledLibrary = scriptDirectory .. "\\beta tester ui\\SanAndreasOnline\\lib"
     package.path = scriptDirectory .. "\\?.lua;" .. bundledLibrary .. "\\?.lua;"
@@ -1891,6 +1908,58 @@ local notificationFrame = imgui.OnFrame(
 )
 notificationFrame.HideCursor = true
 
+local updaterFrame = imgui.OnFrame(
+    function()
+        return isSampAvailable()
+            and updateStatus.title ~= ""
+            and (updateStatus.active or os.clock() - updateStatus.finishedAt < 5)
+    end,
+    function()
+        local display = imgui.GetIO().DisplaySize
+        local width, height = 390, 96
+        local x, y = display.x - width - 18, 18
+        local flags = imgui.WindowFlags.NoDecoration + imgui.WindowFlags.NoMove
+            + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoSavedSettings
+            + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoInputs
+            + imgui.WindowFlags.NoBackground
+
+        imgui.SetNextWindowPos(V2(0, 0), imgui.Cond.Always)
+        imgui.SetNextWindowSize(display, imgui.Cond.Always)
+        imgui.Begin("##PBRP_updater_overlay", nil, flags)
+        local dl = imgui.GetWindowDrawList()
+        hudPanel(dl, x, y, width, height, 0.82)
+
+        local accentColor = updateStatus.active and colA(0.95) or col(0.35, 0.88, 0.58, 1)
+        dl:AddText(V2(x + 14, y + 10), accentColor, "PEKANBARU UI  /  " .. updateStatus.title)
+        dl:AddText(V2(x + 14, y + 34), col(0.90, 0.92, 0.97, 1),
+            fitText(updateStatus.detail, width - 28))
+
+        local progressText
+        local progress = 0
+        if updateStatus.total > 0 then
+            progress = math.max(0, math.min(1, updateStatus.completed / updateStatus.total))
+            progressText = string.format("%d/%d file selesai  |  %.1f KB file aktif",
+                updateStatus.completed, updateStatus.total, updateStatus.currentBytes / 1024)
+        else
+            progressText = updateStatus.active and "Menghubungi GitHub..." or updateStatus.detail
+        end
+        dl:AddText(V2(x + 14, y + 57), col(0.67, 0.71, 0.79, 1),
+            fitText(progressText, width - 28))
+
+        local barX, barY, barW = x + 14, y + height - 14, width - 28
+        dl:AddRectFilled(V2(barX, barY), V2(barX + barW, barY + 3), col(1, 1, 1, 0.10), 2)
+        if progress > 0 then
+            dl:AddRectFilled(V2(barX, barY), V2(barX + barW * progress, barY + 3), accentColor, 2)
+        elseif updateStatus.active then
+            local pulse = (math.sin(os.clock() * 5) + 1) * 0.5
+            dl:AddRectFilled(V2(barX, barY), V2(barX + barW * (0.18 + pulse * 0.22), barY + 3),
+                accentColor, 2)
+        end
+        imgui.End()
+    end
+)
+updaterFrame.HideCursor = true
+
 -- ---------- perintah & loop ----------
 local function isOtherUiOpen()
     return phoneUI.isOpen() or inventoryUI.isOpen() or vehiclesUI.isOpen()
@@ -1932,6 +2001,309 @@ local function toggleRadial()
     radialOpen[0] = true
 end
 
+local function updaterNotice(message)
+    local text = "[PBRP Updater] " .. tostring(message)
+    print(text)
+    if isSampAvailable() then
+        sampAddChatMessage(text, 0xFFD4AF37)
+    end
+end
+
+local function setUpdaterStatus(title, detail)
+    updateStatus.active = true
+    updateStatus.title = title
+    updateStatus.detail = detail or ""
+    updateStatus.finishedAt = 0
+end
+
+local function finishUpdaterStatus(title, detail)
+    updateStatus.title = title
+    updateStatus.detail = detail or ""
+    updateStatus.active = false
+    updateStatus.finishedAt = os.clock()
+end
+
+local function updaterFileExists(path)
+    local file = io.open(path, "rb")
+    if not file then return false end
+    file:close()
+    return true
+end
+
+local function downloadUpdaterFile(url, path)
+    local downloadStatus = require("moonloader").download_status
+    local success = false
+    local failed = false
+    local finalStatus
+    local okStart, startError = pcall(downloadUrlToFile, url, path, function(_, status)
+        finalStatus = status
+        if status == downloadStatus.STATUS_DOWNLOADINGDATA or status == downloadStatus.STATUSEX_DATAAVAILABLE then
+            local file = io.open(path, "rb")
+            if file then
+                updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
+                file:close()
+            end
+        end
+        if status == downloadStatus.STATUS_ENDDOWNLOADDATA
+            or status == downloadStatus.STATUSEX_ENDDOWNLOAD then
+            success = true
+        elseif (downloadStatus.STATUS_DOWNLOADERROR and status == downloadStatus.STATUS_DOWNLOADERROR)
+            or (downloadStatus.STATUS_DOWNLOAD_ERROR and status == downloadStatus.STATUS_DOWNLOAD_ERROR) then
+            failed = true
+        end
+    end)
+    if not okStart then
+        return false, tostring(startError)
+    end
+
+    local deadline = os.time() + 45
+    while not success and not failed and os.time() < deadline do
+        local file = io.open(path, "rb")
+        if file then
+            updateStatus.currentBytes = file:seek("end") or updateStatus.currentBytes
+            file:close()
+        end
+        wait(50)
+    end
+    if not success then
+        return false, failed and ("status unduhan " .. tostring(finalStatus)) or "unduhan timeout"
+    end
+
+    local file = io.open(path, "rb")
+    if not file then
+        return false, "file unduhan tidak ditemukan"
+    end
+    local size = file:seek("end")
+    file:close()
+    if not size or size == 0 then
+        return false, "file unduhan kosong"
+    end
+    updateStatus.currentBytes = size
+    return true
+end
+
+local function readUpdaterFile(path)
+    local file = io.open(path, "rb")
+    if not file then return nil end
+    local content = file:read("*a")
+    file:close()
+    return content
+end
+
+local function removeUpdaterFiles(paths)
+    for _, path in ipairs(paths) do
+        os.remove(path)
+    end
+end
+
+local function rollbackUpdaterFiles(applied)
+    for index = #applied, 1, -1 do
+        local item = applied[index]
+        os.remove(item.destination)
+        if item.hadOriginal then
+            local restored, restoreError = os.rename(item.backup, item.destination)
+            if not restored then
+                updaterNotice("Rollback gagal untuk " .. item.relativePath .. ": " .. tostring(restoreError))
+            end
+        end
+    end
+end
+
+local function checkForGithubUpdate()
+    if not scriptDirectory then
+        updaterNotice("Lokasi script tidak dapat ditentukan; update dibatalkan.")
+        finishUpdaterStatus("Update gagal", "Lokasi script tidak dapat ditentukan.")
+        return
+    end
+
+    local prefix = "https://raw.githubusercontent.com/" .. UPDATE_CONFIG.owner .. "/"
+        .. UPDATE_CONFIG.repository .. "/"
+    local commitUrl = "https://api.github.com/repos/" .. UPDATE_CONFIG.owner .. "/"
+        .. UPDATE_CONFIG.repository .. "/commits/" .. UPDATE_CONFIG.branch
+    local commitPath = scriptDirectory .. "\\.pbrp-update-commit.tmp"
+    local manifestPath = scriptDirectory .. "\\.pbrp-update-manifest.tmp"
+    local statePath = scriptDirectory .. "\\.pbrp-update-version"
+    local temporaryPaths = { commitPath, manifestPath }
+
+    setUpdaterStatus("Memeriksa GitHub", UPDATE_CONFIG.repository .. "/" .. UPDATE_CONFIG.branch)
+    local downloaded, downloadError = downloadUpdaterFile(commitUrl, commitPath)
+    if not downloaded then
+        removeUpdaterFiles(temporaryPaths)
+        updaterNotice("Tidak bisa memeriksa GitHub: " .. tostring(downloadError))
+        finishUpdaterStatus("Pemeriksaan gagal", tostring(downloadError))
+        return
+    end
+
+    local commitBody = readUpdaterFile(commitPath)
+    local commit = commitBody and commitBody:match('"sha"%s*:%s*"([%x]+)"')
+    os.remove(commitPath)
+    if not commit then
+        os.remove(manifestPath)
+        updaterNotice("Respons GitHub tidak berisi commit yang valid.")
+        finishUpdaterStatus("Pemeriksaan gagal", "Respons GitHub tidak berisi commit yang valid.")
+        return
+    end
+
+    local installedCommit = readUpdaterFile(statePath)
+    if installedCommit and installedCommit:match("^([%x]+)") == commit then
+        os.remove(manifestPath)
+        print("[PBRP Updater] Script sudah versi terbaru.")
+        finishUpdaterStatus("Versi terbaru", "Tidak ada file yang perlu diunduh.")
+        return
+    end
+
+    setUpdaterStatus("Memeriksa daftar file", "Commit " .. commit:sub(1, 7))
+    local manifestUrl = prefix .. commit .. "/update-manifest.txt"
+    downloaded, downloadError = downloadUpdaterFile(manifestUrl, manifestPath)
+    if not downloaded then
+        removeUpdaterFiles(temporaryPaths)
+        updaterNotice("Tidak bisa mengunduh manifest: " .. tostring(downloadError))
+        finishUpdaterStatus("Update gagal", "Manifest: " .. tostring(downloadError))
+        return
+    end
+
+    local manifest = readUpdaterFile(manifestPath)
+    os.remove(manifestPath)
+    if not manifest then
+        updaterNotice("Manifest update tidak dapat dibaca.")
+        finishUpdaterStatus("Update gagal", "Manifest update tidak dapat dibaca.")
+        return
+    end
+
+    local files, seenPaths = {}, {}
+    for line in manifest:gmatch("[^\r\n]+") do
+        local relativePath = line:match("^%s*(.-)%s*$")
+        if relativePath ~= "" and relativePath:sub(1, 1) ~= "#" then
+            local allowed = relativePath == "uijtrp.lua"
+                or relativePath:match("^uijtrp/[%w_%-]+%.lua$")
+            if not allowed then
+                updaterNotice("Path di manifest ditolak: " .. relativePath)
+                finishUpdaterStatus("Update dibatalkan", "Path manifest ditolak: " .. relativePath)
+                return
+            end
+            if not seenPaths[relativePath] then
+                seenPaths[relativePath] = true
+                files[#files + 1] = relativePath
+            end
+        end
+    end
+    if #files == 0 or not seenPaths["uijtrp.lua"] then
+        updaterNotice("Manifest kosong atau tidak menyertakan uijtrp.lua.")
+        finishUpdaterStatus("Update dibatalkan", "Manifest harus menyertakan uijtrp.lua.")
+        return
+    end
+
+    updateStatus.completed = 0
+    updateStatus.total = #files
+    local staged, stagedPaths = {}, {}
+    for index, relativePath in ipairs(files) do
+        local localPath = relativePath:gsub("/", "\\")
+        local destination = scriptDirectory .. "\\" .. localPath
+        local temporary = destination .. ".pbrp-update.tmp"
+        local backup = destination .. ".pbrp-update.bak"
+        local sourceUrl = prefix .. commit .. "/" .. relativePath
+
+        updateStatus.currentBytes = 0
+        setUpdaterStatus("Mengunduh file", string.format("%d/%d  %s", index, #files, relativePath))
+        os.remove(temporary)
+        downloaded, downloadError = downloadUpdaterFile(sourceUrl, temporary)
+        if not downloaded then
+            removeUpdaterFiles(stagedPaths)
+            os.remove(temporary)
+            updaterNotice("Gagal mengunduh " .. relativePath .. ": " .. tostring(downloadError))
+            finishUpdaterStatus("Unduhan gagal", relativePath .. ": " .. tostring(downloadError))
+            return
+        end
+
+        setUpdaterStatus("Memvalidasi Lua", string.format("%d/%d  %s", index, #files, relativePath))
+        local compiled, compileError = loadfile(temporary)
+        if not compiled then
+            removeUpdaterFiles(stagedPaths)
+            os.remove(temporary)
+            updaterNotice("Syntax Lua tidak valid pada " .. relativePath .. ": " .. tostring(compileError))
+            finishUpdaterStatus("Validasi gagal", relativePath .. ": sintaks Lua tidak valid.")
+            return
+        end
+
+        staged[#staged + 1] = {
+            relativePath = relativePath,
+            destination = destination,
+            temporary = temporary,
+            backup = backup,
+            hadOriginal = updaterFileExists(destination),
+        }
+        stagedPaths[#stagedPaths + 1] = temporary
+        updateStatus.completed = index
+    end
+
+    setUpdaterStatus("Memasang update", string.format("%d file Lua", #files))
+    local stateTemporary = statePath .. ".tmp"
+    local stateFile, stateError = io.open(stateTemporary, "wb")
+    if not stateFile then
+        removeUpdaterFiles(stagedPaths)
+        updaterNotice("Tidak bisa menyimpan versi update: " .. tostring(stateError))
+        finishUpdaterStatus("Pemasangan gagal", tostring(stateError))
+        return
+    end
+    local wroteState, writeError = stateFile:write(commit, "\n")
+    local closedState, closeError = stateFile:close()
+    if not wroteState or not closedState then
+        os.remove(stateTemporary)
+        removeUpdaterFiles(stagedPaths)
+        updaterNotice("Tidak bisa menulis versi update: " .. tostring(writeError or closeError))
+        finishUpdaterStatus("Pemasangan gagal", tostring(writeError or closeError))
+        return
+    end
+    staged[#staged + 1] = {
+        relativePath = "versi update",
+        destination = statePath,
+        temporary = stateTemporary,
+        backup = statePath .. ".bak",
+        hadOriginal = updaterFileExists(statePath),
+    }
+
+    local applied = {}
+    for _, item in ipairs(staged) do
+        os.remove(item.backup)
+        if item.hadOriginal then
+            local backedUp, backupError = os.rename(item.destination, item.backup)
+            if not backedUp then
+                rollbackUpdaterFiles(applied)
+                removeUpdaterFiles(stagedPaths)
+                os.remove(stateTemporary)
+                updaterNotice("Tidak bisa membuat backup " .. item.relativePath .. ": " .. tostring(backupError))
+                finishUpdaterStatus("Pemasangan gagal", "Backup gagal: " .. item.relativePath)
+                return
+            end
+        end
+
+        local installed, installError = os.rename(item.temporary, item.destination)
+        if not installed then
+            if item.hadOriginal then
+                local restored, restoreError = os.rename(item.backup, item.destination)
+                if not restored then
+                    updaterNotice("Rollback gagal untuk " .. item.relativePath .. ": " .. tostring(restoreError))
+                end
+            end
+            rollbackUpdaterFiles(applied)
+            removeUpdaterFiles(stagedPaths)
+            os.remove(stateTemporary)
+            updaterNotice("Tidak bisa memasang " .. item.relativePath .. ": " .. tostring(installError))
+            finishUpdaterStatus("Pemasangan gagal", "Gagal mengganti " .. item.relativePath)
+            return
+        end
+        applied[#applied + 1] = item
+    end
+
+    for _, item in ipairs(applied) do
+        if item.hadOriginal then os.remove(item.backup) end
+    end
+    updaterNotice("Update GitHub berhasil. Script akan dimuat ulang.")
+    finishUpdaterStatus("Update selesai", string.format("%d file Lua terpasang. Memuat ulang...", #files))
+    wait(1000)
+    thisScript():reload()
+end
+
 function main()
     while not isSampAvailable() do wait(100) end
     sampAddChatMessage("[PekanBaru UI] Client UI aktif. F2 membuka menu utama; M atau /lradial membuka radial.", 0xFFD4AF37)
@@ -1964,6 +2336,10 @@ function main()
 
     local lastReadyHeartbeat = 0
     local wasPlayerSpawned = false
+    local lastObservedServer = nil
+    local nextServerCheck = 0
+    local nextUpdateCheck = 0
+    local updateCheckRunning = false
 
     local function tick()
         local spawned = isSampAvailable() and sampIsLocalPlayerSpawned() and true or false
@@ -2038,6 +2414,39 @@ function main()
 
     while true do
         wait(0)
+        if os.time() >= nextServerCheck then
+            nextServerCheck = os.time() + 1
+            if not isSampAvailable() then
+                lastObservedServer = nil
+                nextUpdateCheck = 0
+            else
+                local serverIp = sampGetCurrentServerAddress()
+                if serverIp then
+                    local normalizedIp = tostring(serverIp)
+                    if normalizedIp ~= lastObservedServer then
+                        lastObservedServer = normalizedIp
+                    end
+                    if normalizedIp == UPDATE_CONFIG.serverIp
+                        and os.clock() >= nextUpdateCheck and not updateCheckRunning then
+                        nextUpdateCheck = os.clock() + UPDATE_CONFIG.checkIntervalSeconds
+                        updateCheckRunning = true
+                        lua_thread.create(function()
+                            local ok, updateError = pcall(checkForGithubUpdate)
+                            updateCheckRunning = false
+                            if not ok then
+                                updaterNotice("Pemeriksaan update gagal: " .. tostring(updateError))
+                                finishUpdaterStatus("Update gagal", tostring(updateError))
+                            end
+                        end)
+                    elseif normalizedIp ~= UPDATE_CONFIG.serverIp then
+                        nextUpdateCheck = 0
+                    end
+                else
+                    lastObservedServer = nil
+                    nextUpdateCheck = 0
+                end
+            end
+        end
         -- error di satu tick tidak boleh mematikan seluruh script
         local ok, err = pcall(tick)
         if not ok then logUiError("main loop", err) end
