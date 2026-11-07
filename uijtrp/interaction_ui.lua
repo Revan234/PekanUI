@@ -46,27 +46,29 @@ return function(imgui, V2, color, sendChat, inventoryUI, isPlayerUiReady)
     local function getVehicleTarget()
         local px, py, pz = getCharCoordinates(PLAYER_PED)
         local closest, closestDistance
+        if type(sampGetCarHandleBySampVehicleId) ~= "function" then
+            return nil
+        end
+
         for vehicleId = 0, 1999 do
-            if sampIsVehicleDefined(vehicleId) then
-                local ok, vehicle = sampGetCarHandleBySampVehicleId(vehicleId)
-                if ok and doesVehicleExist(vehicle) then
-                    local x, y, z = getCarCoordinates(vehicle)
-                    local distance = distanceBetween(px, py, pz, x, y, z)
-                    if distance <= 4.0 and (not closestDistance or distance < closestDistance) then
-                        local screenX, screenY = convert3DCoordsToScreen(x, y, z + 1.2)
-                        if screenX and screenY then
-                            closest = {
-                                kind = "vehicle",
-                                id = vehicleId,
-                                x = x,
-                                y = y,
-                                z = z,
-                                screenX = screenX,
-                                screenY = screenY,
-                                distance = distance,
-                            }
-                            closestDistance = distance
-                        end
+            local ok, vehicle = sampGetCarHandleBySampVehicleId(vehicleId)
+            if ok and doesVehicleExist(vehicle) then
+                local x, y, z = getCarCoordinates(vehicle)
+                local distance = distanceBetween(px, py, pz, x, y, z)
+                if distance <= 4.0 and (not closestDistance or distance < closestDistance) then
+                    local screenX, screenY = convert3DCoordsToScreen(x, y, z + 1.2)
+                    if screenX and screenY then
+                        closest = {
+                            kind = "vehicle",
+                            id = vehicleId,
+                            x = x,
+                            y = y,
+                            z = z,
+                            screenX = screenX,
+                            screenY = screenY,
+                            distance = distance,
+                        }
+                        closestDistance = distance
                     end
                 end
             end
