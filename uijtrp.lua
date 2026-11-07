@@ -442,6 +442,10 @@ local adminPanelUI = loadFactory("uijtrp.admin_panel_ui", stubModule({
     open = noop, close = noop, isOpen = function() return false end,
     onServerMessage = function() return false end, reset = noop,
 }), imgui, V2, ffi, sendCommand, isPlayerUiReady, assetDirectory .. "\\pekanorganiz.png")
+local factionPanelUI = loadFactory("uijtrp.faction_panel_ui", stubModule({
+    onShowDialog = function() return nil end, isOpen = function() return false end,
+    close = noop, reset = noop,
+}), imgui, V2, isPlayerUiReady)
 local notificationUI = loadFactory("uijtrp.notification_ui", stubModule(),
     imgui, V2, isPlayerUiReady, uiSounds)
 notificationUI.setInventoryOwner(inventoryUI.ownsTextdraw)
@@ -480,6 +484,7 @@ chainInventoryTextdrawEvent("onTextDrawHide", inventoryUI.onTextDrawHide)
 chainInventoryTextdrawEvent("onShowTextDraw", vehiclesUI.onShowTextDraw)
 chainInventoryTextdrawEvent("onTextDrawSetString", vehiclesUI.onTextDrawSetString)
 chainInventoryTextdrawEvent("onTextDrawHide", vehiclesUI.onTextDrawHide)
+chainInventoryTextdrawEvent("onShowDialog", factionPanelUI.onShowDialog)
 
 local loadingUI = loadFactory("uijtrp.loading_screen", stubModule(),
     imgui, V2, assetDirectory .. "\\jtrp_loading.png",
@@ -2040,7 +2045,8 @@ updaterFrame.HideCursor = true
 -- ---------- perintah & loop ----------
 local function isOtherUiOpen()
     return phoneUI.isOpen() or inventoryUI.isOpen() or vehiclesUI.isOpen()
-        or vipRubyUI.isOpen() or cctvUI.isOpen() or adminPanelUI.isOpen() or factionVehicleUI.isOpen()
+        or vipRubyUI.isOpen() or cctvUI.isOpen() or adminPanelUI.isOpen()
+        or factionVehicleUI.isOpen() or factionPanelUI.isOpen()
 end
 
 local function toggleFactionVehicleUi()
@@ -2226,7 +2232,7 @@ end
 
 local function isAllowedUpdaterPath(relativePath)
     if relativePath == "uijtrp.lua" then return true end
-    if relativePath:sub(1, 6) ~= "uijtrp/" or relativePath:find("\\", 1, true)
+    if relativePath:sub(1, 7) ~= "uijtrp/" or relativePath:find("\\", 1, true)
         or relativePath:find("//", 1, true) or relativePath:find(":", 1, true)
         or not relativePath:match("^[%w_%.%-/]+$") then
         return false
@@ -2527,6 +2533,7 @@ function main()
             vipRubyUI.reset()
             adminPanelUI.reset()
             factionVehicleUI.reset()
+            factionPanelUI.reset()
             -- keluar dari spawn / disconnect: pastikan menu tidak menggantung
             menuOpen[0] = false
             radialOpen[0] = false
@@ -2563,7 +2570,9 @@ function main()
                 end
             end
         end
-        if wasKeyPressed(0x1B) and not typing then
+        if wasKeyPressed(0x1B) and factionPanelUI.isOpen() then
+            factionPanelUI.close()
+        elseif wasKeyPressed(0x1B) and not typing then
             if phoneUI.isOpen() then
                 phoneUI.close()
             elseif inventoryUI.isOpen() then
@@ -2572,6 +2581,8 @@ function main()
                 vehiclesUI.close()
             elseif factionVehicleUI.isOpen() then
                 factionVehicleUI.toggle()
+            elseif factionPanelUI.isOpen() then
+                factionPanelUI.reset()
             elseif vipRubyUI.isOpen() then
                 vipRubyUI.close()
             elseif radialOpen[0] then

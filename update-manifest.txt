@@ -4,6 +4,7 @@ uijtrp/admin_panel_ui.lua
 uijtrp/animated_logo.lua
 uijtrp/cctv_ui.lua
 uijtrp/faction_vehicle_ui.lua
+uijtrp/faction_panel_ui.lua
 uijtrp/feature_catalog.lua
 uijtrp/icons.lua
 uijtrp/inventory_ui.lua
