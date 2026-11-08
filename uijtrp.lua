@@ -502,8 +502,7 @@ chainInventoryTextdrawEvent("onShowDialog", factionPanelUI.onShowDialog)
 chainInventoryTextdrawEvent("onShowDialog", mechanicServiceUI.onShowDialog)
 
 local loadingUI = loadFactory("uijtrp.loading_screen", stubModule(),
-    imgui, V2, assetDirectory .. "\\jtrp_loading.png",
-    assetDirectory .. "\\pbrp-logo.png", assetDirectory .. "\\pekanorganiz.png")
+    imgui, V2, assetDirectory .. "\\jtrp_loading.png")
 if not isPlayerUiReady() then
     loadingUI.startConnection()
 end
