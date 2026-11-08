@@ -26,6 +26,7 @@ Updater hanya mengizinkan `uijtrp.lua` serta file Lua, gambar, dan audio di
 dalam folder `uijtrp`; path absolut, traversal folder, logo frames, serta aset
 notify/notif dan ringtone ditolak. File Lua divalidasi sintaksnya; file gambar
 dan audio dipasang sebagai data biner.
+Awalan manifest salah ketik `ufjtrp/` dikoreksi ke `uijtrp/` sebelum validasi.
 Unduhan dicoba ulang dan memakai GitHub CDN sebagai jalur cadangan. Jika semua
 jalur gagal, file yang sedang dipakai tidak diganti dan pemeriksaan dicoba lagi
 setelah 30 detik selama tetap berada di server PekanBaru. Jika repo privat,

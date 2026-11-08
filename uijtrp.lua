@@ -2573,6 +2573,10 @@ local function checkForGithubUpdate()
     for line in manifest:gmatch("[^\r\n]+") do
         local relativePath = line:match("^%s*(.-)%s*$")
         if relativePath ~= "" and relativePath:sub(1, 1) ~= "#" then
+            if relativePath:sub(1, 7):lower() == "ufjtrp/" then
+                relativePath = "uijtrp/" .. relativePath:sub(8)
+                updaterNotice("Path manifest ufjtrp/ dikoreksi menjadi uijtrp/.")
+            end
             if not isAllowedUpdaterPath(relativePath) then
                 updaterNotice("Path di manifest ditolak: " .. relativePath)
                 finishUpdaterStatus("Update dibatalkan", "Path manifest ditolak: " .. relativePath)
