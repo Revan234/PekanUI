@@ -1,1 +1,4 @@
 uijtrp.lua
+uijtrp/login_ui.lua
+uijtrp/character_select_ui.lua
+uijtrp/assets/sound/login_feedback.wav

@@ -49,3 +49,8 @@ Android atau pemain tanpa MoonLoader tetap dapat menggunakan fitur bisnis.
 Modul `uijtrp/character_select_ui.lua` menampilkan pilihan karakter dalam
 bentuk card dengan animasi. Dialog server tetap menjadi fallback untuk pemain
 tanpa MoonLoader.
+
+Modul `uijtrp/login_ui.lua` memakai tema merah-hitam dan efek audio pendek
+`uijtrp/assets/sound/login_feedback.wav` dari file WAV yang disediakan untuk
+ketikan password serta tombol masuk. File modul dan efek audio disertakan di
+manifest updater.

@@ -117,6 +117,11 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     local videoPeer = nil
     local nextVideoStatusAt = 0
     local cameraActionStatus = ""
+    local cameraTimerModes = { 0, 3, 5, 10 }
+    local cameraTimerIndex = 1
+    local cameraCaptureAt = nil
+    local cameraGridEnabled = true
+    local cameraTagsEnabled = true
     local readyAcknowledged = false
     local lastReadyAttempt = 0
     local selectedPhoto = 1
@@ -2020,43 +2025,75 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     pages.camera = function()
         header("Kamera")
         local avail = imgui.GetContentRegionAvail()
-        local vfH = math.max(150, avail.y - 190)
+        local vfH = math.max(125, avail.y - 190)
+        local timerSeconds = cameraTimerModes[cameraTimerIndex]
+        local timerLabel = timerSeconds == 0 and "TIMER OFF" or ("TIMER " .. timerSeconds .. "s")
+
+        imgui.TextColored(V4(1, 0.84, 0.04, 1), "SAO CAMERA")
+        imgui.SameLine()
+        imgui.TextColored(K.muted, "FOTO LOKAL")
+        imgui.SameLine(imgui.GetContentRegionAvail().x - 4)
+        imgui.TextColored(K.muted, "FOV")
+        local toolbarWidth = (avail.x - 12) / 3
+        if pillButton(timerLabel .. "##phone_camera_timer", toolbarWidth, 28,
+            timerSeconds == 0 and "glass" or "primary") then
+            cameraTimerIndex = cameraTimerIndex % #cameraTimerModes + 1
+            timerSeconds = cameraTimerModes[cameraTimerIndex]
+        end
+        imgui.SameLine(0, 6)
+        if pillButton((cameraGridEnabled and "GRID ON" or "GRID OFF") .. "##phone_camera_grid",
+            toolbarWidth, 28, cameraGridEnabled and "primary" or "glass") then
+            cameraGridEnabled = not cameraGridEnabled
+        end
+        imgui.SameLine(0, 6)
+        if pillButton((cameraTagsEnabled and "TAGS ON" or "TAGS OFF") .. "##phone_camera_tags",
+            toolbarWidth, 28, cameraTagsEnabled and "primary" or "glass") then
+            cameraTagsEnabled = not cameraTagsEnabled
+        end
+
+        imgui.Spacing()
         local p = imgui.GetCursorScreenPos()
         imgui.Dummy(V2(avail.x, vfH))
         local dl = imgui.GetWindowDrawList()
         local x0, y0, x1, y1 = p.x, p.y, p.x + avail.x, p.y + vfH
         gradientRounded(dl, x0, y0, avail.x, vfH, 20, U(0.07, 0.07, 0.09, 1), U(0.01, 0.01, 0.02, 1))
-        -- garis bantu 3x3
-        local gc = U(1, 1, 1, 0.20)
-        for i = 1, 2 do
-            dl:AddLine(V2(x0 + avail.x * i / 3, y0 + 12), V2(x0 + avail.x * i / 3, y1 - 12), gc, 1)
-            dl:AddLine(V2(x0 + 12, y0 + vfH * i / 3), V2(x1 - 12, y0 + vfH * i / 3), gc, 1)
+        dl:AddRect(V2(x0, y0), V2(x1, y1), U(1, 1, 1, 0.12), 20, 0, 1)
+        if cameraGridEnabled then
+            local gc = U(1, 1, 1, 0.20)
+            for i = 1, 2 do
+                dl:AddLine(V2(x0 + avail.x * i / 3, y0 + 12),
+                    V2(x0 + avail.x * i / 3, y1 - 12), gc, 1)
+                dl:AddLine(V2(x0 + 12, y0 + vfH * i / 3),
+                    V2(x1 - 12, y0 + vfH * i / 3), gc, 1)
+            end
         end
         local cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
         local fs = 38 + math.sin(A.t * 2.4) * 2
-        dl:AddRect(V2(cx - fs, cy - fs), V2(cx + fs, cy + fs), U(1, 0.84, 0.04, 0.95), 4, 0, 1.6)
-        -- indikator lensa mengikuti zoom FOV aktif
+        dl:AddCircle(V2(cx, cy), fs, U(1, 0.84, 0.04, 0.75), 48, 1.6)
         dl:AddRectFilled(V2(cx - 16, y1 - 52), V2(cx + 16, y1 - 30), U(0, 0, 0, 0.45), 11)
         dlTextC(dl, tostring(photoMedia.zoom()) .. "x", cx, y1 - 49, U(1, 0.84, 0.04, 1), 0.95)
-        dlText(dl, "Ambil gambar dari layar permainan", x0 + 16, y1 - 22, U(1, 1, 1, 0.6), 0.85)
-        local flash = 1 - (A.t - A.shutterAt) / 0.28
-        if flash > 0 then
-            dl:AddRectFilled(V2(x0, y0), V2(x1, y1), U(1, 1, 1, flash * 0.85), 20)
+        dl:AddRectFilled(V2(x0 + 12, y0 + 12), V2(x0 + 102, y0 + 34), U(0, 0, 0, 0.42), 11)
+        dlText(dl, "SAO • LIVE RP", x0 + 21, y0 + 16, U(1, 1, 1, 0.88), 0.78)
+        if cameraTagsEnabled then
+            dl:AddRectFilled(V2(x1 - 94, y0 + 12), V2(x1 - 12, y0 + 34), U(0, 0, 0, 0.42), 11)
+            dlTextC(dl, "TAGS", x1 - 53, y0 + 16, U(1, 0.84, 0.04, 0.95), 0.78)
         end
+        dlTextC(dl, "TAMPILAN VIEWFINDER GAME", cx, cy + fs + 12, U(1, 1, 1, 0.66), 0.76)
+        local flash = 1 - (A.t - A.shutterAt) / 0.28
+        if flash > 0 then dl:AddRectFilled(V2(x0, y0), V2(x1, y1), U(1, 1, 1, flash * 0.85), 20) end
 
-        imgui.Dummy(V2(1, 2))
-        imgui.TextColored(K.muted, "ZOOM / FIELD OF VIEW")
+        imgui.Spacing()
         local zoomChoices = { 0.5, 1, 2 }
-        local zoomWidth = (avail.x - 12) / #zoomChoices
+        local zoomWidth = (avail.x - 16) / #zoomChoices
         for index, value in ipairs(zoomChoices) do
-            if index > 1 then imgui.SameLine(0, 6) end
-            local label = tostring(value) .. "x##phone_zoom_" .. tostring(value)
-            if pillButton(label, zoomWidth, 30, photoMedia.zoom() == value and "primary" or "glass") then
+            if index > 1 then imgui.SameLine(0, 8) end
+            local label = (value == 0.5 and "0,5x" or tostring(value) .. "x")
+                .. "##phone_zoom_" .. tostring(value)
+            if pillButton(label, zoomWidth, 28, photoMedia.zoom() == value and "primary" or "glass") then
                 photoMedia.setZoom(value)
             end
         end
-        imgui.Spacing()
-        imgui.TextColored(K.muted, "POSE")
+        imgui.TextColored(K.muted, "POSE KARAKTER")
         local poses = {
             { label = "Santai", anim = "Santai" },
             { label = "Melambai", anim = "Lambai" },
@@ -2065,16 +2102,24 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         local poseWidth = (avail.x - 12) / #poses
         for index, pose in ipairs(poses) do
             if index > 1 then imgui.SameLine(0, 6) end
-            if pillButton(pose.label .. "##phone_pose_" .. pose.anim, poseWidth, 30, "glass") then
+            if pillButton(pose.label .. "##phone_pose_" .. pose.anim, poseWidth, 26, "glass") then
                 sendChat("/e " .. pose.anim)
                 cameraActionStatus = "Pose " .. pose.label .. " dikirim; karakter harus di kaki."
             end
         end
-        imgui.Spacing()
-        centerText("FOTO", V4(1, 0.84, 0.04, 1), 0.95)
+        imgui.Dummy(V2(1, 2))
         local busy = photoMedia.isBusy()
-        local d = 58
-        imgui.SetCursorPosX(imgui.GetCursorPosX() + (avail.x - d) / 2)
+        local controlsWidth = avail.x
+        local sideWidth = 64
+        local d = 56
+        imgui.SetCursorPosX(imgui.GetCursorPosX() + (controlsWidth - sideWidth * 2 - d) / 2)
+        if pillButton("ALBUM##phone_camera_album", sideWidth, 38, "glass") then
+            photoMedia.refresh()
+            selectedPhoto = 1
+            page = "photos"
+            cameraCaptureAt = nil
+        end
+        imgui.SameLine(0, 12)
         local clicked = imgui.InvisibleButton("##phone_camera", V2(d, d))
         hoverKey("##phone_camera")
         local min = imgui.GetItemRectMin()
@@ -2084,13 +2129,36 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             busy and U(0.55, 0.57, 0.62, 1) or U(1, 1, 1, 1), 40)
         if clicked and not busy then
             cameraActionStatus = ""
-            photoMedia.capture()
-            A.shutterAt = A.t
+            local delay = cameraTimerModes[cameraTimerIndex]
+            if delay > 0 then
+                cameraCaptureAt = os.clock() + delay
+            else
+                photoMedia.capture()
+                A.shutterAt = A.t
+            end
+        end
+        imgui.SameLine(0, 12)
+        if pillButton("POSE##phone_camera_pose", sideWidth, 38, "glass") then
+            sendChat("/e Santai")
+            cameraActionStatus = "Pose Santai dikirim; karakter harus di kaki."
+        end
+        if cameraCaptureAt then
+            local remaining = cameraCaptureAt - os.clock()
+            if remaining <= 0 then
+                cameraCaptureAt = nil
+                photoMedia.capture()
+                A.shutterAt = A.t
+            else
+                status = string.format("Foto diambil dalam %d detik...", math.ceil(remaining))
+            end
         end
         if photoMedia.cameraStatus() ~= "" then
             status = photoMedia.cameraStatus()
         elseif cameraActionStatus ~= "" then
             status = cameraActionStatus
+        elseif cameraCaptureAt then
+            status = string.format("Foto diambil dalam %d detik...",
+                math.ceil(math.max(0, cameraCaptureAt - os.clock())))
         else
             status = photoMedia.status()
         end

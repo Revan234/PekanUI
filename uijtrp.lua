@@ -148,9 +148,12 @@ end
 loadUpdateLog()
 
 if scriptDirectory then
+    local localLibrary = scriptDirectory .. "\\lib"
     local bundledLibrary = scriptDirectory .. "\\beta tester ui\\SanAndreasOnline\\lib"
-    package.path = scriptDirectory .. "\\?.lua;" .. bundledLibrary .. "\\?.lua;"
+    package.path = scriptDirectory .. "\\?.lua;" .. localLibrary .. "\\?.lua;"
+        .. localLibrary .. "\\?\\init.lua;" .. bundledLibrary .. "\\?.lua;"
         .. bundledLibrary .. "\\?\\init.lua;" .. package.path
+    package.cpath = localLibrary .. "\\?.dll;" .. package.cpath
 end
 
 local imgui = require "mimgui"
@@ -467,7 +470,7 @@ local businessUI = loadFactory("uijtrp.business_ui", stubModule({
 local loginUI = loadFactory("uijtrp.login_ui", stubModule({
     onShowDialog = function() return nil end, isOpen = function() return false end,
     reset = noop,
-}), imgui, V2, ffi)
+}), imgui, V2, ffi, assetDirectory .. "\\sound\\login_feedback.wav", uiSounds)
 loginUI.characterSelect = loadFactory("uijtrp.character_select_ui", stubModule({
     onShowDialog = function() return nil end, isOpen = function() return false end,
     reset = noop,
@@ -551,7 +554,7 @@ end
 
 -- buka link di browser (fallback: salin ke clipboard)
 pcall(function()
-    ffi.cdef [[ int ShellExecuteA(void* hwnd, const char* op, const char* file, const char* params, const char* dir, int show); ]]
+    ffi.cdef [[ void* ShellExecuteA(void* hwnd, const char* op, const char* file, const char* params, const char* dir, int show); ]]
 end)
 
 local function openUrl(url)
@@ -580,7 +583,7 @@ local function openGameBrowser()
         return false
     end
 
-    local code = tonumber(result)
+    local code = tonumber(ffi.cast("intptr_t", result))
     if not code or code <= 32 then
         sampAddChatMessage("[" .. CONFIG.shortTag .. "] Windows gagal membuka browser (kode " .. tostring(code or "tidak diketahui") .. ").", 0xFFFF6A6A)
         return false
