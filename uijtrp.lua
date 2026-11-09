@@ -2266,11 +2266,15 @@ local function playUpdaterDownloadSound()
     return ok
 end
 
+local lastUpdaterNotice = ""
 local function updaterNotice(message)
     local text = "[PBRP Updater] " .. tostring(message)
-    print(text)
-    if isSampAvailable() then
-        sampAddChatMessage(text, 0xFFD4AF37)
+    if text ~= lastUpdaterNotice then
+        lastUpdaterNotice = text
+        print(text)
+        if isSampAvailable() then
+            sampAddChatMessage(text, 0xFFD4AF37)
+        end
     end
 end
 
@@ -2943,6 +2947,7 @@ function main()
     local function tick()
         local spawned = isSampAvailable() and sampIsLocalPlayerSpawned() and true or false
         playerSpawned = spawned
+        if phoneUI.updateSharedMusic then phoneUI.updateSharedMusic() end
         local typing = isSampAvailable() and (sampIsChatInputActive() or sampIsDialogActive())
         interactionUI.update(spawned and not typing and not menuOpen[0] and not radialOpen[0]
             and not adminOpen[0] and not isOtherUiOpen())
@@ -3052,10 +3057,18 @@ function main()
                                 updaterNotice("Pemeriksaan update gagal: " .. tostring(updateError))
                                 finishUpdaterStatus("Update gagal", tostring(updateError))
                             end
+                            local retryableStatuses = {
+                                ["Pemeriksaan gagal"] = true,
+                                ["Update gagal"] = true,
+                                ["Unduhan gagal"] = true,
+                                ["Pemasangan gagal"] = true,
+                            }
                             if updateStatus.title ~= "Versi terbaru"
-                                and updateStatus.title ~= "Update selesai" then
-                                nextUpdateCheck = os.clock() + 30
-                                print("[PBRP Updater] Pemeriksaan ulang dijadwalkan dalam 30 detik.")
+                                and updateStatus.title ~= "Update selesai"
+                                and not retryableStatuses[updateStatus.title] then
+                                nextUpdateCheck = os.clock() + UPDATE_CONFIG.checkIntervalSeconds
+                            else
+                                nextUpdateCheck = os.clock() + UPDATE_CONFIG.checkIntervalSeconds * 2
                             end
                         end)
                     elseif normalizedIp ~= UPDATE_CONFIG.serverIp then

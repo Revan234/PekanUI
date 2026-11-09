@@ -139,6 +139,17 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     local playlists = {}
     local tracks = {}
     local trackOrder = {}
+    local sharedMusic = nil
+    local MUSIC_BASS_ATTRIB_VOLUME = 2
+    local MUSIC_BASS_ERROR_ALREADY = 14
+    local sharedAudio = {
+        bass = nil,
+        bassChecked = false,
+        initialized = false,
+        handle = nil,
+        lastVolumeUpdate = 0,
+        warned = false,
+    }
     local selectedPlaylist = 0
     local musicView = "playlists"
     local musicPublic = imgui.new.bool(true)
@@ -582,6 +593,101 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     local function dialBackspace()
         local current = ffi.string(dialNumber)
         ffi.copy(dialNumber, current:sub(1, -2))
+    end
+
+    local function stopSharedAudio()
+        local bass = sharedAudio.bass
+        if sharedAudio.handle and bass then
+            pcall(bass.BASS_ChannelStop, sharedAudio.handle)
+            pcall(bass.BASS_StreamFree, sharedAudio.handle)
+        end
+        sharedAudio.handle = nil
+    end
+
+    local function sharedAudioWarning(message)
+        if sharedAudio.warned then return end
+        sharedAudio.warned = true
+        print("[PBRP/PKU UI] " .. message)
+        status = "Audio bersama gagal diputar. Periksa moonloader.log."
+    end
+
+    local function getSharedAudioBass()
+        if sharedAudio.bassChecked then return sharedAudio.bass end
+        sharedAudio.bassChecked = true
+        local ok, bass = pcall(require, "bass")
+        if not ok or not bass then
+            sharedAudioWarning("Binding BASS tidak tersedia untuk audio musik bersama: " .. tostring(bass))
+            return nil
+        end
+        sharedAudio.bass = bass
+        return bass
+    end
+
+    local function startSharedAudio(url)
+        stopSharedAudio()
+        local bass = getSharedAudioBass()
+        if not bass then return false end
+
+        if not sharedAudio.initialized then
+            local ok, initialized = pcall(bass.BASS_Init, -1, 44100, 0, nil, nil)
+            local errorCode = bass.BASS_ErrorGetCode()
+            if not ok or (not initialized and errorCode ~= MUSIC_BASS_ERROR_ALREADY) then
+                sharedAudioWarning("BASS gagal diinisialisasi (kode " .. tostring(errorCode) .. ").")
+                return false
+            end
+            sharedAudio.initialized = true
+        end
+
+        local ok, stream = pcall(bass.BASS_StreamCreateURL, url, 0, 0, nil, nil)
+        if not ok or not stream or stream == 0 then
+            sharedAudioWarning("BASS gagal membuka URL stream (kode "
+                .. tostring(bass.BASS_ErrorGetCode()) .. ").")
+            return false
+        end
+        sharedAudio.handle = stream
+        pcall(bass.BASS_ChannelSetAttribute, stream, MUSIC_BASS_ATTRIB_VOLUME, 0)
+        local playOk, playing = pcall(bass.BASS_ChannelPlay, stream, 1)
+        if not playOk or not playing then
+            sharedAudioWarning("BASS gagal memutar URL stream (kode "
+                .. tostring(bass.BASS_ErrorGetCode()) .. ").")
+            stopSharedAudio()
+            return false
+        end
+        sharedAudio.lastVolumeUpdate = 0
+        return true
+    end
+
+    local function updateSharedMusic()
+        if not sharedMusic or not sharedAudio.handle then return end
+        local now = os.clock()
+        if now - sharedAudio.lastVolumeUpdate < 0.12 then return end
+        sharedAudio.lastVolumeUpdate = now
+
+        local volume = 0
+        local ok, connected = pcall(sampIsPlayerConnected, sharedMusic.owner)
+        if ok and connected then
+            pcall(function()
+                local hasPed, ped = sampGetCharHandleBySampPlayerId(sharedMusic.owner)
+                if hasPed and ped and doesCharExist(ped) then
+                    local px, py, pz = getCharCoordinates(PLAYER_PED)
+                    local sx, sy, sz = getCharCoordinates(ped)
+                    local dx, dy, dz = px - sx, py - sy, pz - sz
+                    local distance = math.sqrt(dx * dx + dy * dy + dz * dz)
+                    volume = math.max(0, 1 - distance / 35)
+                end
+            end)
+        end
+
+        local bass = sharedAudio.bass
+        if bass then
+            local setOk, setVolume = pcall(
+                bass.BASS_ChannelSetAttribute, sharedAudio.handle,
+                MUSIC_BASS_ATTRIB_VOLUME, volume)
+            if not setOk or not setVolume then
+                sharedAudioWarning("Gagal memperbarui volume musik bersama.")
+                stopSharedAudio()
+            end
+        end
     end
 
     local function keyButton(id, d, label, sub)
@@ -1372,6 +1478,39 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             return true
         end
 
+        local sourceId, sharedTrackId, sharedTitle =
+            text:match("^@PBRPUI:MUSIC:WORLD:START:(%d+):(%d+):(.*)$")
+        if sourceId then
+            stopSharedAudio()
+            sharedMusic = {
+                owner = tonumber(sourceId) or -1,
+                track = tonumber(sharedTrackId) or 0,
+                title = sharedTitle
+            }
+            NS.playingTrack = sharedMusic.track
+            return true
+        end
+
+        local audioSource, audioUrl =
+            text:match("^@PBRPUI:MUSIC:WORLD:URL:(%d+):(.*)$")
+        if audioSource then
+            if sharedMusic and sharedMusic.owner == tonumber(audioSource) then
+                sharedMusic.url = audioUrl
+                startSharedAudio(audioUrl)
+            end
+            return true
+        end
+
+        local stoppedSource = text:match("^@PBRPUI:MUSIC:WORLD:STOP:(%d+)$")
+        if stoppedSource then
+            if sharedMusic and sharedMusic.owner == tonumber(stoppedSource) then
+                stopSharedAudio()
+                sharedMusic = nil
+                NS.playingTrack = 0
+            end
+            return true
+        end
+
         local createdId = text:match("^@PBRPUI:MUSIC:CREATED:(%d+):[01]$")
         if createdId then
             status = "Playlist berhasil dibuat."
@@ -2025,7 +2164,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     pages.camera = function()
         header("Kamera")
         local avail = imgui.GetContentRegionAvail()
-        local vfH = math.max(125, avail.y - 190)
+        local vfH = math.max(115, avail.y - 225)
         local timerSeconds = cameraTimerModes[cameraTimerIndex]
         local timerLabel = timerSeconds == 0 and "TIMER OFF" or ("TIMER " .. timerSeconds .. "s")
 
@@ -2073,12 +2212,13 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         dl:AddRectFilled(V2(cx - 16, y1 - 52), V2(cx + 16, y1 - 30), U(0, 0, 0, 0.45), 11)
         dlTextC(dl, tostring(photoMedia.zoom()) .. "x", cx, y1 - 49, U(1, 0.84, 0.04, 1), 0.95)
         dl:AddRectFilled(V2(x0 + 12, y0 + 12), V2(x0 + 102, y0 + 34), U(0, 0, 0, 0.42), 11)
-        dlText(dl, "SAO • LIVE RP", x0 + 21, y0 + 16, U(1, 1, 1, 0.88), 0.78)
+        dlText(dl, "SAO CAMERA", x0 + 21, y0 + 16, U(1, 1, 1, 0.88), 0.78)
         if cameraTagsEnabled then
             dl:AddRectFilled(V2(x1 - 94, y0 + 12), V2(x1 - 12, y0 + 34), U(0, 0, 0, 0.42), 11)
             dlTextC(dl, "TAGS", x1 - 53, y0 + 16, U(1, 0.84, 0.04, 0.95), 0.78)
         end
-        dlTextC(dl, "TAMPILAN VIEWFINDER GAME", cx, cy + fs + 12, U(1, 1, 1, 0.66), 0.76)
+        dlTextC(dl, "KONTROL FOTO GAME • HASIL VIA F8", cx, cy + fs + 12,
+            U(1, 1, 1, 0.66), 0.76)
         local flash = 1 - (A.t - A.shutterAt) / 0.28
         if flash > 0 then dl:AddRectFilled(V2(x0, y0), V2(x1, y1), U(1, 1, 1, flash * 0.85), 20) end
 
@@ -2641,8 +2781,20 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     end
 
     pages.music = function()
+        local function drawSharedMusic()
+            if not sharedMusic then return end
+            beginCard("##music_shared_session", 58, K.glass)
+            imgui.TextColored(K.green, "LISTEN TOGETHER  ·  " .. sharedMusic.title)
+            imgui.TextColored(K.muted, string.format(
+                "Sumber warga #%d  ·  audio Lua mengikuti pemutar (35 meter)",
+                sharedMusic.owner))
+            endCard()
+            imgui.Spacing()
+        end
+
         if musicView == "playlists" then
             header("Musik")
+            drawSharedMusic()
             if pillButton("SEGARKAN PLAYLIST##music_refresh", -1, 32, "glass") then
                 sendChat("/rpui_music_list")
             end
@@ -2689,6 +2841,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             endCard()
         else
             header("Playlist #" .. tostring(selectedPlaylist))
+            drawSharedMusic()
             local avail = imgui.GetContentRegionAvail().x
             for _, id in ipairs(trackOrder) do
                 local track = tracks[id]
@@ -3035,6 +3188,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             imgui.PushStyleVarFloat(imgui.StyleVar.ChildRounding, 0)
             imgui.BeginChild("##phone_content", V2(sw, sh - 48 - 30), false, padFlag)
             imgui.PopStyleVar(2)
+            if renderPage ~= "camera" then cameraCaptureAt = nil end
             local render = pages[renderPage] or pages.home
             render()
             imgui.EndChild()
@@ -3074,8 +3228,10 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         close = close,
         isOpen = function() return open end,
         onServerMessage = onServerMessage,
+        updateSharedMusic = updateSharedMusic,
         reset = function()
             stopRingtone()
+            stopSharedAudio()
             photoMedia.restoreCamera()
             open = false
             page = "lock"
@@ -3093,6 +3249,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             NS.banner = nil
             NS.slide = 0
             NS.slideVel = 0
+            NS.playingTrack = 0
+            sharedMusic = nil
         end,
         -- untuk dipanggil dari skrip utama (mis. perintah tes): notify("Nama", "isi pesan", 12345)
         notify = function(title, body, number)

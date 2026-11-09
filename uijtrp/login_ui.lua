@@ -186,27 +186,31 @@ return function(imgui, V2, ffi, soundPath, uiSounds)
             colorU32(imgui.ImVec4(1, 0.24, 0.30, 0)), colorU32(imgui.ImVec4(1, 0.30, 0.34, 0.8)),
             colorU32(imgui.ImVec4(1, 0.30, 0.34, 0.8)), colorU32(imgui.ImVec4(1, 0.24, 0.30, 0)))
 
-        imgui.SetCursorPos(V2(24, 16))
-        imgui.TextColored(P.text, "PEKANBARU ROLEPLAY")
-        imgui.SetCursorPos(V2(24, 43))
-        imgui.TextColored(imgui.ImVec4(1, 0.70, 0.72, 1), "ACCOUNT AUTHENTICATION")
-        imgui.SetCursorPos(V2(24, 108))
+        local heroX = size.x - 210
+        imgui.SetCursorPos(V2(heroX, 16))
+        imgui.TextColored(imgui.ImVec4(1, 0.18, 0.23, 1), "PEKANBARU")
+        imgui.SetCursorPos(V2(heroX, 56))
+        imgui.TextColored(P.muted, "ROLEPLAY")
+
+        imgui.SetCursorPos(V2(24, 104))
+        imgui.TextColored(imgui.ImVec4(1, 0.72, 0.75, 1), "LOGIN SERVER")
+        imgui.SetCursorPos(V2(24, 134))
         imgui.Text("Selamat datang kembali")
-        imgui.SetCursorPos(V2(24, 135))
+        imgui.SetCursorPos(V2(24, 160))
         imgui.TextColored(P.muted, accountName ~= "" and accountName or "Masukkan kata sandi akun Anda")
 
-        drawList:AddRectFilled(V2(pos.x + 24, pos.y + 164), V2(pos.x + size.x - 24, pos.y + 165),
+        drawList:AddRectFilled(V2(pos.x + 24, pos.y + 182), V2(pos.x + size.x - 24, pos.y + 183),
             colorU32(imgui.ImVec4(1, 1, 1, 0.07)))
 
         if loginError and loginError ~= "" then
-            imgui.SetCursorPos(V2(24, 176))
+            imgui.SetCursorPos(V2(24, 196))
             imgui.TextColored(P.error, loginError)
         else
-            imgui.SetCursorPos(V2(24, 176))
+            imgui.SetCursorPos(V2(24, 196))
             imgui.TextColored(P.muted, "Kata sandi")
         end
 
-        imgui.SetCursorPos(V2(24, 201))
+        imgui.SetCursorPos(V2(24, 222))
         local inputFlags = imgui.InputTextFlags.Password + imgui.InputTextFlags.EnterReturnsTrue
         local enterPressed = imgui.InputTextWithHint("##PBRP_login_password", "Masukkan kata sandi",
             password, ffi.sizeof(password), inputFlags)
