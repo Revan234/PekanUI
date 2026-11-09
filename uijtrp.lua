@@ -476,7 +476,7 @@ loginUI.characterSelect = loadFactory("uijtrp.character_select_ui", stubModule({
     onShowDialog = function() return nil end, isOpen = function() return false end,
     reset = noop,
 }), imgui, V2, assetDirectory .. "\\sound\\f2383602-54e8-4e0b-b171-eec9722a328f.wav")
-local personalDataUI = loadFactory("uijtrp.personal_data_ui", stubModule({
+loginUI.personalData = loadFactory("uijtrp.personal_data_ui", stubModule({
     onShowDialog = function() return nil end, isOpen = function() return false end,
     reset = noop,
 }), imgui, V2, ffi)
@@ -523,7 +523,7 @@ chainInventoryTextdrawEvent("onShowDialog", mechanicServiceUI.onShowDialog)
 chainInventoryTextdrawEvent("onShowDialog", businessUI.onShowDialog)
 chainInventoryTextdrawEvent("onShowDialog", loginUI.onShowDialog)
 chainInventoryTextdrawEvent("onShowDialog", loginUI.characterSelect.onShowDialog)
-chainInventoryTextdrawEvent("onShowDialog", personalDataUI.onShowDialog)
+chainInventoryTextdrawEvent("onShowDialog", loginUI.personalData.onShowDialog)
 
 local loadingUI = loadFactory("uijtrp.loading_screen", stubModule(),
     imgui, V2, assetDirectory .. "\\jtrp_loading.png")
@@ -700,7 +700,7 @@ end
 chainLoadingEvent("onConnectionClosed", function()
     loginUI.reset()
     loginUI.characterSelect.reset()
-    personalDataUI.reset()
+    loginUI.personalData.reset()
 end)
 
 local function radialAction(item)
