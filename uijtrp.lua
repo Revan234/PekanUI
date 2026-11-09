@@ -460,6 +460,18 @@ local mechanicServiceUI = loadFactory("uijtrp.mechanic_service_ui", stubModule({
     onShowDialog = function() return nil end, isOpen = function() return false end,
     close = noop, reset = noop,
 }), imgui, V2, isPlayerUiReady)
+local businessUI = loadFactory("uijtrp.business_ui", stubModule({
+    onShowDialog = function() return nil end, isOpen = function() return false end,
+    close = noop, reset = noop,
+}), imgui, V2, isPlayerUiReady, assetDirectory .. "\\pbrp-logo.png")
+local loginUI = loadFactory("uijtrp.login_ui", stubModule({
+    onShowDialog = function() return nil end, isOpen = function() return false end,
+    reset = noop,
+}), imgui, V2, ffi)
+loginUI.characterSelect = loadFactory("uijtrp.character_select_ui", stubModule({
+    onShowDialog = function() return nil end, isOpen = function() return false end,
+    reset = noop,
+}), imgui, V2)
 local notificationUI = loadFactory("uijtrp.notification_ui", stubModule(),
     imgui, V2, isPlayerUiReady, uiSounds)
 notificationUI.setInventoryOwner(inventoryUI.ownsTextdraw)
@@ -500,6 +512,9 @@ chainInventoryTextdrawEvent("onTextDrawSetString", vehiclesUI.onTextDrawSetStrin
 chainInventoryTextdrawEvent("onTextDrawHide", vehiclesUI.onTextDrawHide)
 chainInventoryTextdrawEvent("onShowDialog", factionPanelUI.onShowDialog)
 chainInventoryTextdrawEvent("onShowDialog", mechanicServiceUI.onShowDialog)
+chainInventoryTextdrawEvent("onShowDialog", businessUI.onShowDialog)
+chainInventoryTextdrawEvent("onShowDialog", loginUI.onShowDialog)
+chainInventoryTextdrawEvent("onShowDialog", loginUI.characterSelect.onShowDialog)
 
 local loadingUI = loadFactory("uijtrp.loading_screen", stubModule(),
     imgui, V2, assetDirectory .. "\\jtrp_loading.png")
@@ -536,7 +551,7 @@ end
 
 -- buka link di browser (fallback: salin ke clipboard)
 pcall(function()
-    ffi.cdef [[ void* ShellExecuteA(void* hwnd, const char* op, const char* file, const char* params, const char* dir, int show); ]]
+    ffi.cdef [[ int ShellExecuteA(void* hwnd, const char* op, const char* file, const char* params, const char* dir, int show); ]]
 end)
 
 local function openUrl(url)
@@ -547,6 +562,32 @@ local function openUrl(url)
         imgui.SetClipboardText(url)
         sampAddChatMessage("[" .. CONFIG.shortTag .. "] Link disalin ke clipboard: " .. url, 0xFFFFB16A)
     end
+end
+
+local function openGameBrowser()
+    local browserDirectory = scriptDirectory and (scriptDirectory .. "\\uijtrp\\web")
+    local browserPath = browserDirectory and (browserDirectory .. "\\sao_web.exe")
+    if not browserPath or not doesFileExist(browserPath) then
+        sampAddChatMessage("[" .. CONFIG.shortTag .. "] Browser tidak ditemukan di folder uijtrp\\web.", 0xFFFF6A6A)
+        return false
+    end
+
+    local ok, result = pcall(function()
+        return ffi.load("shell32").ShellExecuteA(nil, "open", browserPath, nil, browserDirectory, 1)
+    end)
+    if not ok then
+        sampAddChatMessage("[" .. CONFIG.shortTag .. "] Gagal menjalankan browser: " .. tostring(result), 0xFFFF6A6A)
+        return false
+    end
+
+    local code = tonumber(result)
+    if not code or code <= 32 then
+        sampAddChatMessage("[" .. CONFIG.shortTag .. "] Windows gagal membuka browser (kode " .. tostring(code or "tidak diketahui") .. ").", 0xFFFF6A6A)
+        return false
+    end
+
+    sampAddChatMessage("[" .. CONFIG.shortTag .. "] Browser PekanBaru berhasil dibuka.", 0xFFD4AF37)
+    return true
 end
 
 local function openServerInventory()
@@ -647,6 +688,10 @@ for _, name in ipairs({
 }) do
     chainLoadingEvent(name, loadingUI.cancelConnection)
 end
+chainLoadingEvent("onConnectionClosed", function()
+    loginUI.reset()
+    loginUI.characterSelect.reset()
+end)
 
 local function radialAction(item)
     if item.action == "inventory" then
@@ -959,12 +1004,17 @@ local function drawHome(w)
         { "Pengaturan karakter", "/settings" },
     }, w)
 
+    sectionTitle("APLIKASI")
+    if drawCard("##pbrp_browser", "Browser", "Buka browser web PekanBaru", w, 58, "map") then
+        openGameBrowser()
+    end
+
     sectionTitle("KOMUNITAS")
     linkCards(w)
 
     imgui.Spacing()
     imgui.TextColored(imgui.ImVec4(0.55, 0.78, 0.96, 1.0), "PETUNJUK")
-    note("Tekan F2 untuk membuka menu utama, atau M untuk radial (tekan 1-0 untuk memilih cepat). Inventori dan handphone tersedia dari radial.")
+    note("Tekan F2 untuk membuka menu utama, atau M untuk radial (tekan 1-0 untuk memilih cepat). Gunakan tombol Browser di Beranda atau /browser untuk membuka browser web. Inventori dan handphone tersedia dari radial.")
 
     sectionTitle("LOG UPDATE PEKANBARU UI")
     if updateStatus.active then
@@ -2138,6 +2188,7 @@ local function isOtherUiOpen()
     return phoneUI.isOpen() or inventoryUI.isOpen() or vehiclesUI.isOpen()
         or vipRubyUI.isOpen() or cctvUI.isOpen() or adminPanelUI.isOpen()
         or factionVehicleUI.isOpen() or factionPanelUI.isOpen() or mechanicServiceUI.isOpen()
+        or businessUI.isOpen()
 end
 
 local function toggleFactionVehicleUi()
@@ -2421,6 +2472,22 @@ local function isAllowedUpdaterPath(relativePath)
     if not extension then return false end
     if extension == "lua" then return true end
 
+    if normalizedPath:sub(1, 11) == "uijtrp/web/" then
+        local browserFiles = {
+            ["uijtrp/web/installed_from.txt"] = true,
+            ["uijtrp/web/licenses_filters.txt"] = true,
+            ["uijtrp/web/license_webview2_sdk.txt"] = true,
+            ["uijtrp/web/notice_webview2_sdk.txt"] = true,
+            ["uijtrp/web/readme.txt"] = true,
+            ["uijtrp/web/sao_web.exe"] = true,
+            ["uijtrp/web/sao_web.json"] = true,
+            ["uijtrp/web/filters/easylist.txt"] = true,
+            ["uijtrp/web/filters/easyprivacy.txt"] = true,
+            ["uijtrp/web/filters/urlhaus-filter-online.txt"] = true,
+        }
+        return browserFiles[normalizedPath] == true
+    end
+
     for _, segment in ipairs(segments) do
         if segment:find("notif", 1, true)
             or segment:find("notify", 1, true)
@@ -2472,6 +2539,19 @@ local function isValidUpdaterAsset(relativePath, content)
         valid = content:sub(1, 4) == "OggS"
     elseif extension == "m4a" then
         valid = content:sub(5, 8) == "ftyp"
+    elseif extension == "txt" then
+        valid = not content:find("\0", 1, true)
+    elseif extension == "json" then
+        local json = content:match("^%s*(.-)%s*$")
+        valid = json and json:sub(1, 1) == "{" and json:sub(-1) == "}"
+            and json:find('"product"%s*:%s*"SanAndreasOnline%-Browser"') ~= nil
+    elseif extension == "exe" then
+        if content:sub(1, 2) == "MZ" and #content >= 64 then
+            local b1, b2, b3, b4 = content:byte(61, 64)
+            local peOffset = b1 + b2 * 256 + b3 * 65536 + b4 * 16777216
+            valid = peOffset >= 64 and peOffset + 4 <= #content
+                and content:sub(peOffset + 1, peOffset + 4) == "PE\0\0"
+        end
     end
 
     if not valid then
@@ -2750,6 +2830,7 @@ function main()
     sampRegisterChatCommand("rpui", toggleMenu)
     sampRegisterChatCommand("lradial", toggleRadial)
     sampRegisterChatCommand("adminui", toggleAdminUi)
+    sampRegisterChatCommand("browser", openGameBrowser)
     sampRegisterChatCommand("factioncar", toggleFactionVehicleUi)
     sampRegisterChatCommand("rpuihud", function()
         hudOpen[0] = not hudOpen[0]
@@ -2796,6 +2877,7 @@ function main()
             factionVehicleUI.reset()
             factionPanelUI.reset()
             mechanicServiceUI.reset()
+            businessUI.reset()
             -- keluar dari spawn / disconnect: pastikan menu tidak menggantung
             menuOpen[0] = false
             radialOpen[0] = false
@@ -2836,6 +2918,8 @@ function main()
             factionPanelUI.close()
         elseif wasKeyPressed(0x1B) and mechanicServiceUI.isOpen() then
             mechanicServiceUI.close()
+        elseif wasKeyPressed(0x1B) and businessUI.isOpen() then
+            businessUI.close()
         elseif wasKeyPressed(0x1B) and not typing then
             if phoneUI.isOpen() then
                 phoneUI.close()
@@ -2849,6 +2933,8 @@ function main()
                 factionPanelUI.reset()
             elseif mechanicServiceUI.isOpen() then
                 mechanicServiceUI.close()
+            elseif businessUI.isOpen() then
+                businessUI.close()
             elseif vipRubyUI.isOpen() then
                 vipRubyUI.close()
             elseif radialOpen[0] then

@@ -20,6 +20,8 @@ uijtrp/vehicles_ui.lua
 uijtrp/vipruby_ui.lua
 uijtrp/interaction_ui.lua
 uijtrp/mechanic_service_ui.lua
+uijtrp/business_ui.lua
+uijtrp/character_select_ui.lua
 # Images and sounds update with the UI; logo frames and notify/ringtone assets are excluded.
 uijtrp/assets/jtrp_loading.png
 uijtrp/assets/pbrp-logo.gif
@@ -30,3 +32,14 @@ uijtrp/assets/sound/vehicle_siren_1.mp3
 uijtrp/assets/sound/vehicle_siren_2.mp3
 uijtrp/assets/sound/vehicle_siren_3.mp3
 uijtrp/jtrp_phone/vibrate.wav
+# Browser package; profile data (cookies/cache) stays local and is never downloaded.
+uijtrp/web/installed_from.txt
+uijtrp/web/LICENSES_filters.txt
+uijtrp/web/LICENSE_WebView2_SDK.txt
+uijtrp/web/NOTICE_WebView2_SDK.txt
+uijtrp/web/README.txt
+uijtrp/web/sao_web.exe
+uijtrp/web/sao_web.json
+uijtrp/web/filters/easylist.txt
+uijtrp/web/filters/easyprivacy.txt
+uijtrp/web/filters/urlhaus-filter-online.txt

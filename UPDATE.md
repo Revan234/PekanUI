@@ -41,3 +41,11 @@ Modul `uijtrp/interaction_ui.lua` menyediakan prompt ALT untuk interaksi
 pemain dan kendaraan. Perubahan Lua dapat dikirim melalui updater,
 tetapi command server untuk bayar, bersalaman, dan hood/trunk berada di source
 Pawn; compile dan deploy gamemode server diperlukan setelah perubahan Pawn.
+
+Modul `uijtrp/business_ui.lua` menampilkan dialog pilihan belanja dan menu
+bisnis dengan UI Lua. Dialog server tetap menjadi fallback, sehingga pemain
+Android atau pemain tanpa MoonLoader tetap dapat menggunakan fitur bisnis.
+
+Modul `uijtrp/character_select_ui.lua` menampilkan pilihan karakter dalam
+bentuk card dengan animasi. Dialog server tetap menjadi fallback untuk pemain
+tanpa MoonLoader.
