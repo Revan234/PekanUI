@@ -2470,7 +2470,6 @@ local function isAllowedUpdaterPath(relativePath)
 
     local extension = segments[#segments]:match("%.([%w]+)$")
     if not extension then return false end
-    if extension == "lua" then return true end
 
     if normalizedPath:sub(1, 11) == "uijtrp/web/" then
         local browserFiles = {
@@ -2487,6 +2486,7 @@ local function isAllowedUpdaterPath(relativePath)
         }
         return browserFiles[normalizedPath] == true
     end
+    if extension == "lua" then return true end
 
     for _, segment in ipairs(segments) do
         if segment:find("notif", 1, true)
@@ -2591,8 +2591,10 @@ local function checkForGithubUpdate()
         .. UPDATE_CONFIG.repository .. "/commits/" .. UPDATE_CONFIG.branch
     local commitPath = scriptDirectory .. "\\.pbrp-update-commit.tmp"
     local manifestPath = scriptDirectory .. "\\.pbrp-update-manifest.tmp"
+    local componentsManifestPath = scriptDirectory .. "\\.pbrp-components-update-manifest.tmp"
+    local browserManifestPath = scriptDirectory .. "\\.pbrp-browser-update-manifest.tmp"
     local statePath = scriptDirectory .. "\\.pbrp-update-version"
-    local temporaryPaths = { commitPath, manifestPath }
+    local temporaryPaths = { commitPath, manifestPath, componentsManifestPath, browserManifestPath }
     local atomCommitUrl = "https://github.com/" .. UPDATE_CONFIG.owner .. "/"
         .. UPDATE_CONFIG.repository .. "/commits/" .. UPDATE_CONFIG.branch .. ".atom"
 
@@ -2615,7 +2617,7 @@ local function checkForGithubUpdate()
         or commitBody:match("Grit::Commit/([%x]+)"))
     os.remove(commitPath)
     if not commit then
-        os.remove(manifestPath)
+        removeUpdaterFiles(temporaryPaths)
         updaterNotice("Respons GitHub tidak berisi commit yang valid.")
         finishUpdaterStatus("Pemeriksaan gagal", "Respons GitHub tidak berisi commit yang valid.")
         return
@@ -2630,10 +2632,17 @@ local function checkForGithubUpdate()
         .. UPDATE_CONFIG.repository .. "@" .. commit .. "/"
     local manifest
     downloaded, downloadError, manifest = downloadUpdaterFile(manifestUrl, manifestPath, function(_, content)
+        local foundMainScript = false
         for line in content:gmatch("[^\r\n]+") do
-            if line:match("^%s*(.-)%s*$") == "uijtrp.lua" then return true end
+            local relativePath = line:match("^%s*(.-)%s*$")
+            if relativePath ~= "" and relativePath:sub(1, 1) ~= "#" then
+                if relativePath ~= "uijtrp.lua" then
+                    return false, "bootstrap manifest hanya boleh memuat uijtrp.lua"
+                end
+                foundMainScript = true
+            end
         end
-        return false, "manifest kosong atau tidak menyertakan uijtrp.lua"
+        return foundMainScript, "bootstrap manifest kosong atau tidak menyertakan uijtrp.lua"
     end, { cdnPrefix .. "update-manifest.txt" })
     if not downloaded then
         removeUpdaterFiles(temporaryPaths)
@@ -2642,12 +2651,80 @@ local function checkForGithubUpdate()
         return
     end
 
-    os.remove(manifestPath)
     if not manifest then
+        removeUpdaterFiles(temporaryPaths)
         updaterNotice("Manifest update tidak dapat dibaca.")
         finishUpdaterStatus("Update gagal", "Manifest update tidak dapat dibaca.")
         return
     end
+
+    setUpdaterStatus("Memeriksa modul UI", "Komponen PekanBaru")
+    local componentManifest
+    downloaded, downloadError, componentManifest = downloadUpdaterFile(
+        prefix .. commit .. "/components-update-manifest.txt", componentsManifestPath,
+        function(_, content)
+            local foundComponent = false
+            for line in content:gmatch("[^\r\n]+") do
+                local relativePath = line:match("^%s*(.-)%s*$")
+                if relativePath ~= "" and relativePath:sub(1, 1) ~= "#" then
+                    if relativePath:sub(1, 7) ~= "uijtrp/" or relativePath:sub(1, 11) == "uijtrp/web/"
+                        or not isAllowedUpdaterPath(relativePath) then
+                        return false, "path manifest komponen ditolak: " .. relativePath
+                    end
+                    foundComponent = true
+                end
+            end
+            return foundComponent, "manifest komponen kosong"
+        end, { cdnPrefix .. "components-update-manifest.txt" })
+    if not downloaded then
+        removeUpdaterFiles(temporaryPaths)
+        updaterNotice("Tidak bisa mengunduh manifest komponen: " .. tostring(downloadError))
+        finishUpdaterStatus("Update gagal", "Manifest komponen: " .. tostring(downloadError))
+        return
+    end
+    if not componentManifest then
+        removeUpdaterFiles(temporaryPaths)
+        updaterNotice("Manifest komponen tidak dapat dibaca.")
+        finishUpdaterStatus("Update gagal", "Manifest komponen tidak dapat dibaca.")
+        return
+    end
+
+    setUpdaterStatus("Memeriksa paket browser", "Browser PekanBaru")
+    local browserManifest
+    downloaded, downloadError, browserManifest = downloadUpdaterFile(
+        prefix .. commit .. "/browser-update-manifest.txt", browserManifestPath,
+        function(_, content)
+            local seenBrowserPaths = {}
+            for line in content:gmatch("[^\r\n]+") do
+                local relativePath = line:match("^%s*(.-)%s*$")
+                if relativePath ~= "" and relativePath:sub(1, 1) ~= "#" then
+                    if relativePath:sub(1, 11) ~= "uijtrp/web/"
+                        or not isAllowedUpdaterPath(relativePath) then
+                        return false, "path manifest browser ditolak: " .. relativePath
+                    end
+                    seenBrowserPaths[relativePath] = true
+                end
+            end
+            if not seenBrowserPaths["uijtrp/web/sao_web.exe"] then
+                return false, "manifest browser tidak menyertakan sao_web.exe"
+            end
+            return true
+        end, { cdnPrefix .. "browser-update-manifest.txt" })
+    if not downloaded then
+        removeUpdaterFiles(temporaryPaths)
+        updaterNotice("Tidak bisa mengunduh manifest browser: " .. tostring(downloadError))
+        finishUpdaterStatus("Update gagal", "Manifest browser: " .. tostring(downloadError))
+        return
+    end
+    os.remove(browserManifestPath)
+    if not browserManifest then
+        removeUpdaterFiles(temporaryPaths)
+        updaterNotice("Manifest browser tidak dapat dibaca.")
+        finishUpdaterStatus("Update gagal", "Manifest browser tidak dapat dibaca.")
+        return
+    end
+    manifest = manifest .. "\n" .. componentManifest .. "\n" .. browserManifest
+    os.remove(manifestPath)
 
     local files, seenPaths = {}, {}
     for line in manifest:gmatch("[^\r\n]+") do

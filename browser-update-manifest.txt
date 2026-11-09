@@ -1,0 +1,11 @@
+# Browser package; profile data (cookies/cache) stays local and is never downloaded.
+uijtrp/web/installed_from.txt
+uijtrp/web/LICENSES_filters.txt
+uijtrp/web/LICENSE_WebView2_SDK.txt
+uijtrp/web/NOTICE_WebView2_SDK.txt
+uijtrp/web/README.txt
+uijtrp/web/sao_web.exe
+uijtrp/web/sao_web.json
+uijtrp/web/filters/easylist.txt
+uijtrp/web/filters/easyprivacy.txt
+uijtrp/web/filters/urlhaus-filter-online.txt
