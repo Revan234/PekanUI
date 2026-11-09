@@ -1,4 +1,4 @@
-return function(imgui, V2)
+return function(imgui, V2, musicPath)
     local P = {
         bg = imgui.ImVec4(0.035, 0.035, 0.045, 0.97),
         panel = imgui.ImVec4(0.075, 0.065, 0.075, 0.98),
@@ -15,6 +15,7 @@ return function(imgui, V2)
     local TABLIST_HEADERS = 5
     local dialogId, characters, createListItem, open = nil, {}, nil, false
     local openedAt = 0
+    local selectionMusicWarned = false
     local frame
 
     local function colorU32(value)
@@ -35,7 +36,68 @@ return function(imgui, V2)
         if frame then frame.HideCursor = true end
     end
 
-    local function respond(button, item)
+    local function playSelectionMusic()
+        if not musicPath or type(loadAudioStream) ~= "function"
+            or type(setAudioStreamState) ~= "function" then
+            if not selectionMusicWarned then
+                selectionMusicWarned = true
+                print("[PBRP/PKU UI] API audio tidak tersedia; lagu pemilihan karakter tidak dapat diputar.")
+            end
+            return
+        end
+        if type(doesFileExist) ~= "function" or not doesFileExist(musicPath) then
+            if not selectionMusicWarned then
+                selectionMusicWarned = true
+                print("[PBRP/PKU UI] Lagu pemilihan karakter tidak ditemukan: " .. musicPath)
+            end
+            return
+        end
+
+        local loaded, stream = pcall(loadAudioStream, musicPath)
+        if not loaded or not stream or stream == 0 then
+            if not selectionMusicWarned then
+                selectionMusicWarned = true
+                print("[PBRP/PKU UI] Gagal memuat lagu pemilihan karakter: " .. tostring(stream))
+            end
+            return
+        end
+
+        local volumeOk, volumeError = pcall(setAudioStreamVolume, stream, 0.65)
+        if not volumeOk and not selectionMusicWarned then
+            selectionMusicWarned = true
+            print("[PBRP/PKU UI] Gagal mengatur volume lagu karakter: " .. tostring(volumeError))
+        end
+        local playing, playError = pcall(setAudioStreamState, stream, 1)
+        if not playing then
+            pcall(setAudioStreamState, stream, 0)
+            if type(releaseAudioStream) == "function" then pcall(releaseAudioStream, stream) end
+            if not selectionMusicWarned then
+                selectionMusicWarned = true
+                print("[PBRP/PKU UI] Gagal memutar lagu pemilihan karakter: " .. tostring(playError))
+            end
+            return
+        end
+
+        if type(lua_thread) == "table" and type(lua_thread.create) == "function"
+            and type(releaseAudioStream) == "function" then
+            local scheduled, scheduleError = pcall(function()
+                lua_thread.create(function()
+                    wait(13000)
+                    pcall(setAudioStreamState, stream, 0)
+                    local released, releaseError = pcall(releaseAudioStream, stream)
+                    if not released then
+                        print("[PBRP/PKU UI] Gagal melepas lagu karakter: " .. tostring(releaseError))
+                    end
+                end)
+            end)
+            if not scheduled and not selectionMusicWarned then
+                selectionMusicWarned = true
+                print("[PBRP/PKU UI] Gagal menjadwalkan pembersihan lagu karakter: " .. tostring(scheduleError))
+            end
+        end
+    end
+
+    local function respond(button, item, playMusic)
         if not dialogId then return end
         if type(sampSendDialogResponse) ~= "function" then
             sampAddChatMessage("[PBRP/PKU UI] API respons dialog karakter tidak tersedia.", 0xFFFF6A6A)
@@ -48,6 +110,7 @@ return function(imgui, V2)
             sampAddChatMessage("[PBRP/PKU UI] Gagal mengirim pilihan karakter: " .. tostring(err), 0xFFFF6A6A)
             return
         end
+        if playMusic then playSelectionMusic() end
         reset()
     end
 
@@ -94,18 +157,15 @@ return function(imgui, V2)
 
     local function draw()
         local display = imgui.GetIO().DisplaySize
-        local width = math.min(820, display.x - 32)
-        local height = math.min(570, display.y - 32)
-        if width < 440 or height < 400 then
-            width, height = math.max(320, display.x - 16), math.max(340, display.y - 16)
-        end
+        local width = math.max(320, math.min(500, display.x - 32))
+        local height = math.max(360, math.min(800, display.y - 32))
 
         local elapsed = math.max(0, os.clock() - openedAt)
         local progress = math.min(1, elapsed / 0.55)
         local eased = 1 - (1 - progress) * (1 - progress) * (1 - progress)
         local alpha = math.min(1, progress * 1.8)
         local slide = (1 - eased) * 32
-        imgui.SetNextWindowPos(V2((display.x - width) / 2, (display.y - height) / 2 + slide), imgui.Cond.Always)
+        imgui.SetNextWindowPos(V2(display.x - width - 24 + slide, 24), imgui.Cond.Always)
         imgui.SetNextWindowSize(V2(width, height), imgui.Cond.Always)
         imgui.PushStyleVarFloat(imgui.StyleVar.Alpha, alpha)
         imgui.PushStyleVarFloat(imgui.StyleVar.WindowRounding, 16)
@@ -204,7 +264,7 @@ return function(imgui, V2)
                         and imgui.ImVec4(1, 0.69, 0.28, cardAlpha)
                         or imgui.ImVec4(0.64, 0.62, 0.65, cardAlpha)),
                     character.banned and "AKUN DIBLOKIR" or "KLIK UNTUK MEMILIH")
-                if clicked then respond(1, character.listItem) end
+                if clicked then respond(1, character.listItem, true) end
             elseif createCard then
                 drawList:AddText(V2(cardPos.x + 78, cardPos.y + 27),
                     colorU32(imgui.ImVec4(0.97, 0.95, 0.96, cardAlpha)), "BUAT KARAKTER BARU")
