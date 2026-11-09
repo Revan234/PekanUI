@@ -85,7 +85,7 @@ return function(imgui, V2, ffi)
                     itemIndex = itemIndex + 1
                 end
             end
-        elseif kind == "select" then
+        elseif kind == "select" or kind == "gender" or kind == "origin" then
             for line in (dialog.body .. "\n"):gmatch("(.-)\n") do
                 line = trim(cleanText(line))
                 if line ~= "" then
