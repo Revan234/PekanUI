@@ -1,4 +1,4 @@
--- phone_ui.lua  (v2 - tampilan iOS / FiveM realistis)
+-- phone_ui.lua  (v3 - iPhone 14 Pro style: beranda widget cuaca & foto, kamera, album foto, Maps, Kalkulator)
 -- Handphone bergaya FiveM: bezel titanium, dynamic island, wallpaper hidup, tema warna per aplikasi,
 -- animasi pegas (buka/tutup/peek), badge notifikasi, banner notifikasi, suara getar + nada notif.
 --
@@ -19,7 +19,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     local SOUND_DIR = (okDir and workDir or ".") .. "\\resource\\PBRP_phone\\"
     local PHONE_SOUND_DIR = (mediaDirectory or ".") .. "\\"
     local PHONE_SETTINGS_PATH = (okDir and workDir or ".") .. "\\config\\uiPBRP_phone.ini"
-    local PEEK_H = 285        -- tinggi bagian HP yang terlihat saat "mengintip" (px)
+    local PEEK_H = 250        -- tinggi bagian HP yang terlihat saat "mengintip" (px)
     local PEEK_TIME = 5.5     -- lama HP mengintip di pojok kanan bawah (detik)
     local BANNER_TIME = 4.6   -- lama banner notifikasi saat HP terbuka (detik)
 
@@ -120,11 +120,16 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
     local cameraTimerModes = { 0, 3, 5, 10 }
     local cameraTimerIndex = 1
     local cameraCaptureAt = nil
-    local cameraGridEnabled = true
+    local cameraGridEnabled = false
     local cameraTagsEnabled = true
     local readyAcknowledged = false
     local lastReadyAttempt = 0
     local selectedPhoto = 1
+    local photosView = "albums"      -- albums | grid | viewer
+    local photosFilter = "recents"   -- recents | favs
+    local favPhotos = {}
+    local homePage = 1
+    local texBudget = 2
     local photoTextures = {}
     local phoneInfo = nil
     local socialPosts = {}
@@ -196,25 +201,30 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         vibrateOn = imgui.new.bool(true)
     }
 
+    local MAP = { style = 2, x = 0, y = 0, scale = 0.35, follow = true, sheet = true, wp = nil,
+        showVeh = false, showCar = false, tex = {}, texAt = {}, drag = 0 }
+
     local apps = {
-        { id = "contacts", label = "Kontak", icon = "user", color = { 0.24, 0.72, 0.48 } },
-        { id = "dialer", label = "Telepon", icon = "phone", color = { 0.20, 0.72, 0.42 } },
-        { id = "messages", label = "Pesan", icon = "chat", color = { 0.20, 0.62, 0.95 } },
-        { id = "bank", label = "Bank", icon = "bank", color = { 0.25, 0.62, 0.83 } },
+        { id = "groups", label = "Grup", icon = "chat", color = { 0.15, 0.78, 0.40 }, art = "whatsapp" },
+        { id = "social", label = "Sosial", icon = "chat", color = { 0.80, 0.25, 0.55 }, art = "insta" },
+        { id = "music", label = "Musik", icon = "chat", color = { 0.95, 0.25, 0.35 }, art = "music" },
+        { id = "maps", label = "Maps", icon = "map", color = { 0.30, 0.65, 0.95 }, art = "maps" },
+        { id = "yellowpages", label = "Direktori", icon = "map", color = { 0.93, 0.70, 0.22 } },
+        { id = "settings", label = "Pengaturan", icon = "settings", color = { 0.45, 0.49, 0.58 } },
+        { id = "calc", label = "Kalkulator", icon = "default", color = { 0.20, 0.20, 0.23 }, art = "calc" },
+        { id = "bank", label = "Bank", icon = "bank", color = { 0.25, 0.62, 0.83 }, art = "bank" },
+        { id = "contacts", label = "Kontak", icon = "user", color = { 0.45, 0.50, 0.58 } },
         { id = "information", label = "Info", icon = "help", color = { 0.34, 0.62, 0.86 } },
         { id = "taxi", label = "Taxi", icon = "vehicle", color = { 0.93, 0.72, 0.22 } },
         { id = "emergency", label = "Darurat", icon = "help", color = { 0.93, 0.39, 0.32 } },
-        { id = "social", label = "X / Sosial", icon = "chat", color = { 0.64, 0.42, 0.83 } },
-        { id = "yellowpages", label = "Yellow Pages", icon = "map", color = { 0.91, 0.69, 0.25 } },
-        { id = "groups", label = "Grup", icon = "user", color = { 0.29, 0.66, 0.77 } },
-        { id = "camera", label = "Kamera", icon = "default", color = { 0.51, 0.58, 0.68 } },
-        { id = "photos", label = "Foto", icon = "map", color = { 0.81, 0.48, 0.55 } },
-        { id = "music", label = "Musik", icon = "chat", color = { 0.82, 0.46, 0.70 } },
-        { id = "settings", label = "Pengaturan", icon = "settings", color = { 0.45, 0.49, 0.58 } }
+        { id = "dialer", label = "Telepon", icon = "phone", color = { 0.20, 0.72, 0.42 } },
+        { id = "messages", label = "Pesan", icon = "chat", color = { 0.20, 0.78, 0.40 } },
+        { id = "camera", label = "Kamera", icon = "default", color = { 0.51, 0.58, 0.68 }, art = "camera" },
+        { id = "photos", label = "Foto", icon = "map", color = { 0.81, 0.48, 0.55 }, art = "photos" }
     }
     local appById = {}
     for _, app in ipairs(apps) do appById[app.id] = app end
-    local dockOrder = { "dialer", "messages", "contacts", "camera" }
+    local dockOrder = { "dialer", "camera", "photos", "messages" }
     local inDock = {}
     for _, id in ipairs(dockOrder) do inDock[id] = true end
 
@@ -362,16 +372,114 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         imgui.SetWindowFontScale(1)
     end
 
-    -- ikon aplikasi mini (dipakai di header, banner, dan kartu notifikasi)
-    local function miniSquircle(dl, x, y, s, app)
+    -- ikon aplikasi gaya iOS (squircle). Beberapa aplikasi punya gambar sendiri (ART).
+    local drawSquircle
+    do
+    local function iconBase(dl, x, y, s, top, bottom)
+        gradientRounded(dl, x, y, s, s, s * 0.24,
+            U(top[1], top[2], top[3], 1), U(bottom[1], bottom[2], bottom[3], 1))
+    end
+    local ART = {}
+    ART.whatsapp = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 0.38, 0.88, 0.48 }, { 0.10, 0.70, 0.30 })
+        local cx, cy = x + s / 2, y + s / 2
+        dl:AddCircle(V2(cx, cy - s * 0.02), s * 0.27, U(1, 1, 1, 1), 32, s * 0.07)
+        icons.draw(dl, "phone", cx - s * 0.14, cy - s * 0.16, s * 0.28, U(1, 1, 1, 1), U(0.2, 0.78, 0.4, 1))
+    end
+    ART.insta = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 0.55, 0.25, 0.85 }, { 1.0, 0.55, 0.20 })
+        local cx, cy = x + s / 2, y + s / 2
+        local h = s * 0.27
+        dl:AddRect(V2(cx - h, cy - h), V2(cx + h, cy + h), U(1, 1, 1, 1), s * 0.16, 0, s * 0.07)
+        dl:AddCircle(V2(cx, cy), s * 0.11, U(1, 1, 1, 1), 24, s * 0.06)
+        dl:AddCircleFilled(V2(cx + h * 0.62, cy - h * 0.62), s * 0.03, U(1, 1, 1, 1), 10)
+    end
+    ART.music = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 1.0, 0.38, 0.48 }, { 0.88, 0.12, 0.25 })
+        local cx, cy = x + s / 2, y + s / 2
+        local w = U(1, 1, 1, 1)
+        dl:AddCircleFilled(V2(cx - s * 0.10, cy + s * 0.17), s * 0.09, w, 18)
+        dl:AddCircleFilled(V2(cx + s * 0.16, cy + s * 0.12), s * 0.09, w, 18)
+        dl:AddLine(V2(cx - s * 0.02, cy + s * 0.17), V2(cx - s * 0.02, cy - s * 0.22), w, s * 0.05)
+        dl:AddLine(V2(cx + s * 0.24, cy + s * 0.12), V2(cx + s * 0.24, cy - s * 0.27), w, s * 0.05)
+        dl:AddLine(V2(cx - s * 0.02, cy - s * 0.22), V2(cx + s * 0.24, cy - s * 0.27), w, s * 0.07)
+    end
+    ART.maps = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 0.80, 0.91, 0.70 }, { 0.62, 0.82, 0.58 })
+        dl:AddLine(V2(x + s * 0.10, y + s * 0.88), V2(x + s * 0.90, y + s * 0.18), U(1, 1, 1, 0.95), s * 0.13)
+        dl:AddLine(V2(x + s * 0.55, y + s * 0.95), V2(x + s * 0.80, y + s * 0.60), U(1, 0.85, 0.35, 1), s * 0.06)
+        local cx, cy = x + s * 0.48, y + s * 0.50
+        dl:AddCircleFilled(V2(cx, cy), s * 0.19, U(1, 1, 1, 1), 24)
+        dl:AddTriangleFilled(V2(cx, cy - s * 0.12), V2(cx + s * 0.09, cy + s * 0.09),
+            V2(cx - s * 0.09, cy + s * 0.09), U(0.10, 0.45, 0.98, 1))
+    end
+    ART.calc = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 0.26, 0.26, 0.28 }, { 0.09, 0.09, 0.10 })
+        local m, g = s * 0.16, s * 0.05
+        local kw = (s - m * 2 - g * 3) / 4
+        dl:AddRectFilled(V2(x + m, y + m), V2(x + s - m, y + m + kw * 1.1), U(0.62, 0.62, 0.65, 1), s * 0.05)
+        for r = 0, 2 do
+            for c = 0, 3 do
+                local kx = x + m + c * (kw + g)
+                local ky = y + m + kw * 1.1 + g * 1.4 + r * (kw + g)
+                local col = c == 3 and U(1, 0.62, 0.04, 1) or U(0.50, 0.50, 0.54, 1)
+                dl:AddRectFilled(V2(kx, ky), V2(kx + kw, ky + kw), col, s * 0.04)
+            end
+        end
+    end
+    ART.bank = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 0.99, 0.99, 1 }, { 0.86, 0.87, 0.90 })
+        local cx, cy = x + s / 2, y + s / 2
+        dl:AddCircleFilled(V2(cx - s * 0.10, cy), s * 0.20, U(0.93, 0.12, 0.16, 1), 28)
+        dl:AddCircleFilled(V2(cx + s * 0.10, cy), s * 0.20, U(1, 0.62, 0.05, 0.92), 28)
+    end
+    ART.camera = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 0.78, 0.80, 0.84 }, { 0.50, 0.52, 0.57 })
+        local cx, cy = x + s / 2, y + s / 2 + s * 0.02
+        dl:AddRectFilled(V2(x + s * 0.38, y + s * 0.24), V2(x + s * 0.62, y + s * 0.34), U(0.12, 0.12, 0.14, 1), s * 0.04)
+        dl:AddRectFilled(V2(x + s * 0.17, y + s * 0.30), V2(x + s * 0.83, y + s * 0.74), U(0.12, 0.12, 0.14, 1), s * 0.10)
+        dl:AddCircleFilled(V2(cx, cy), s * 0.16, U(0.30, 0.32, 0.38, 1), 24)
+        dl:AddCircleFilled(V2(cx, cy), s * 0.11, U(0.05, 0.05, 0.08, 1), 24)
+        dl:AddCircleFilled(V2(cx - s * 0.03, cy - s * 0.03), s * 0.03, U(0.4, 0.5, 0.9, 0.9), 10)
+    end
+    ART.photos = function(dl, x, y, s)
+        iconBase(dl, x, y, s, { 1, 1, 1 }, { 0.93, 0.93, 0.95 })
+        local cx, cy = x + s / 2, y + s / 2
+        for i = 0, 7 do
+            local a = i / 8 * math.pi * 2
+            local r, g, b = hsv(i / 8, 0.70, 1)
+            dl:AddCircleFilled(V2(cx + math.cos(a) * s * 0.17, cy + math.sin(a) * s * 0.17),
+                s * 0.15, U(r, g, b, 0.62), 20)
+        end
+    end
+
+    drawSquircle = function(dl, x, y, s, app, shadow)
+        if shadow then
+            dl:AddRectFilled(V2(x + 1, y + 3), V2(x + s - 1, y + s + 4), U(0, 0, 0, 0.28), s * 0.26)
+        end
+        if app.art and ART[app.art] then
+            ART[app.art](dl, x, y, s)
+            return
+        end
         local c = app.color
-        dl:AddRectFilled(V2(x + 1, y + 2), V2(x + s - 1, y + s + 2), U(0, 0, 0, 0.22), s * 0.27)
-        gradientRounded(dl, x, y, s, s, s * 0.27,
-            U(math.min(1, c[1] * 1.22), math.min(1, c[2] * 1.22), math.min(1, c[3] * 1.22), 1),
-            U(c[1] * 0.80, c[2] * 0.80, c[3] * 0.80, 1))
-        dl:AddRect(V2(x, y), V2(x + s, y + s), U(1, 1, 1, 0.20), s * 0.27, 0, 1)
+        iconBase(dl, x, y, s,
+            { math.min(1, c[1] * 1.22), math.min(1, c[2] * 1.22), math.min(1, c[3] * 1.22) },
+            { c[1] * 0.80, c[2] * 0.80, c[3] * 0.80 })
         local gs = s * 0.52
         icons.draw(dl, app.icon, x + (s - gs) / 2, y + (s - gs) / 2, gs, U(1, 1, 1, 1), U(c[1], c[2], c[3], 1))
+    end
+    end
+
+    -- ikon aplikasi mini (dipakai di banner dan kartu notifikasi)
+    local function miniSquircle(dl, x, y, s, app)
+        drawSquircle(dl, x, y, s, app, false)
+    end
+
+    -- foto dengan sudut membulat (jatuh ke AddImage biasa jika tidak didukung)
+    local function drawPhoto(dl, tex, x0, y0, x1, y1, r)
+        local ok = pcall(dl.AddImageRounded, dl, tex, V2(x0, y0), V2(x1, y1), V2(0, 0), V2(1, 1),
+            U(1, 1, 1, 1), r or 8)
+        if not ok then dl:AddImage(tex, V2(x0, y0), V2(x1, y1)) end
     end
 
     local function pillButton(label, w, h, kind)
@@ -394,7 +502,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         imgui.PushStyleColor(imgui.Col.FrameBgActive, V4(0.22, 0.225, 0.26, 1))
         imgui.PushStyleColor(imgui.Col.Border, V4(1, 1, 1, 0.08))
         imgui.PushStyleVarFloat(imgui.StyleVar.FrameRounding, 13)
-        imgui.PushStyleVarFloat(imgui.StyleVar.FrameBorderSize, 1)
+        imgui.PushStyleVarFloat(imgui.StyleVar.FrameBorderSize, 0)
         imgui.PushStyleVarVec2(imgui.StyleVar.FramePadding, V2(12, 8))
         local changed = imgui.InputTextWithHint(id, hint, buffer, ffi.sizeof(buffer), 0)
         imgui.PopStyleVar(3)
@@ -409,11 +517,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, V2(14, 12))
         imgui.BeginChild(id, V2(-1, height), false, padFlag)
         imgui.PopStyleVar(2)
-        -- garis tepi tipis + kilau atas agar terlihat seperti kaca
-        local p, s = imgui.GetWindowPos(), imgui.GetWindowSize()
-        local dl = imgui.GetWindowDrawList()
-        dl:AddRect(V2(p.x + 0.5, p.y + 0.5), V2(p.x + s.x - 0.5, p.y + s.y - 0.5), U(1, 1, 1, 0.07), 18, 0, 1)
-        dl:AddLine(V2(p.x + 16, p.y + 1), V2(p.x + s.x - 16, p.y + 1), U(1, 1, 1, 0.10), 1)
     end
 
     local function endCard()
@@ -513,10 +616,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         local dl = imgui.GetWindowDrawList()
         local bottom = p.y + rowH * #rows
         dl:AddRectFilled(p, V2(p.x + avail, bottom), UV(K.glass), 16)
-        dl:AddRect(p, V2(p.x + avail, bottom), U(1, 1, 1, 0.07), 16, 0, 1)
         for i, row in ipairs(rows) do
             local y = p.y + (i - 1) * rowH
-            if i > 1 then dl:AddLine(V2(p.x + 14, y), V2(p.x + avail, y), U(1, 1, 1, 0.07), 1) end
             dl:AddText(V2(p.x + 14, y + 13), U(0.60, 0.60, 0.66, 1), row[1])
             local value = fitText(row[2], avail * 0.58)
             local ts = imgui.CalcTextSize(value)
@@ -526,7 +627,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         imgui.Dummy(V2(1, 4))
     end
 
-    -- Ikon aplikasi gaya iOS (squircle) dengan animasi pop-in bertahap + badge.
+    -- Ikon aplikasi gaya iOS dengan animasi pop-in bertahap + badge.
     local function drawAppIcon(app, cellW, cellH, withLabel, order)
         local clicked = imgui.InvisibleButton("##app_" .. app.id, V2(cellW, cellH))
         hoverKey("app_" .. app.id)
@@ -538,21 +639,11 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         t = math.max(0, t)
         local saved = A.gA
         A.gA = saved * math.min(1, t)
-        local size = 56
-        local s = size * (0.55 + 0.45 * t) * (held and 0.9 or (hovered and 1.06 or 1))
+        local size = math.min(52, cellW - 4)
+        local s = size * (0.55 + 0.45 * t) * (held and 0.9 or (hovered and 1.05 or 1))
         local x0 = min.x + cellW / 2 - s / 2
         local y0 = min.y + 2 + (size - s) / 2
-        local c = app.color
-        dl:AddRectFilled(V2(x0 + 1, y0 + 4), V2(x0 + s - 1, y0 + s + 5), U(0, 0, 0, 0.30), 15)
-        gradientRounded(dl, x0, y0, s, s, 15,
-            U(math.min(1, c[1] * 1.22), math.min(1, c[2] * 1.22), math.min(1, c[3] * 1.22), 1),
-            U(c[1] * 0.78, c[2] * 0.78, c[3] * 0.78, 1))
-        dl:AddRectFilledMultiColor(V2(x0 + 5, y0 + 5), V2(x0 + s - 5, y0 + s * 0.48),
-            U(1, 1, 1, 0.17), U(1, 1, 1, 0.17), U(1, 1, 1, 0), U(1, 1, 1, 0))
-        dl:AddRect(V2(x0, y0), V2(x0 + s, y0 + s), U(1, 1, 1, 0.22), 15, 0, 1)
-        local gs = s * 0.5
-        icons.draw(dl, app.icon, x0 + (s - gs) / 2, y0 + (s - gs) / 2, gs,
-            U(1, 1, 1, 1), U(c[1], c[2], c[3], 1))
+        drawSquircle(dl, x0, y0, s, app, true)
         if app.id == "messages" then
             local count = 0
             for _, n in pairs(NS.unread) do count = count + n end
@@ -560,9 +651,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
                 local txt = tostring(math.min(count, 99))
                 local bx, by = x0 + s - 3, y0 + 3
                 local pulse = 1 + math.sin(A.t * 4) * 0.05
-                dl:AddCircleFilled(V2(bx, by + 1), 11 * pulse, U(0, 0, 0, 0.30), 20)
                 dl:AddCircleFilled(V2(bx, by), 10 * pulse, U(1, 0.23, 0.19, 1), 20)
-                dl:AddCircle(V2(bx, by), 10 * pulse, U(1, 1, 1, 0.35), 20, 1)
                 local ts = imgui.CalcTextSize(txt)
                 dl:AddText(V2(bx - ts.x / 2, by - ts.y / 2), U(1, 1, 1, 1), txt)
             end
@@ -570,12 +659,22 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         if withLabel then
             local label = fitText(app.label, cellW + 4)
             local ts = imgui.CalcTextSize(label)
-            local lx, ly = min.x + (cellW - ts.x) / 2, min.y + size + 8
+            local lx, ly = min.x + (cellW - ts.x) / 2, min.y + size + 6
             dl:AddText(V2(lx + 1, ly + 1), U(0, 0, 0, 0.45), label)
             dl:AddText(V2(lx, ly), U(1, 1, 1, 0.96), label)
         end
         A.gA = saved
         return clicked
+    end
+
+    local function photoTexture(photo)
+        local tex = photoTextures[photo.path]
+        if tex ~= nil then return tex or nil end
+        if texBudget <= 0 then return nil end
+        texBudget = texBudget - 1
+        local ok, loaded = pcall(imgui.CreateTextureFromFile, photo.path)
+        photoTextures[photo.path] = (ok and loaded) or false
+        return photoTextures[photo.path] or nil
     end
 
     local function contactLabel(number)
@@ -1017,6 +1116,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         page = unlocked and "home" or "lock"
         chatNumber = nil
         musicView = "playlists"
+        photosView = "albums"
         status = ""
         NS.navDir = -1
     end
@@ -1029,6 +1129,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             trackOrder = {}
         elseif page == "messages" and chatNumber then
             chatNumber = nil
+        elseif page == "photos" and photosView ~= "albums" then
+            photosView = (photosView == "viewer") and "grid" or "albums"
         else
             photoMedia.restoreCamera()
             page = unlocked and "home" or "lock"
@@ -1055,6 +1157,13 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         elseif app == "photos" then
             photoMedia.refresh()
             selectedPhoto = 1
+            photosView = "albums"
+            photosFilter = "recents"
+        elseif app == "maps" then
+            MAP.follow = true
+            MAP.showVeh = false
+        elseif app == "calc" then
+            -- tidak butuh data server
         elseif app == "music" then
             playlists = {}
             tracks = {}
@@ -1549,28 +1658,25 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
 
     local function viewKey(p)
         return p .. ":" .. tostring(chatNumber or 0) .. ":" .. tostring(activeGroupId) .. ":" .. musicView
+            .. ":" .. photosView
     end
 
     local function header(title, appId)
-        local app = appById[appId or page]
-        local clicked = imgui.InvisibleButton("##phone_back", V2(110, 26))
+        local clicked = imgui.InvisibleButton("##phone_back", V2(110, 24))
         hoverKey("##phone_back")
         local min = imgui.GetItemRectMin()
         local dl = imgui.GetWindowDrawList()
         local blue = U(0.30, 0.62, 1, imgui.IsItemActive() and 0.45 or 1)
-        dl:AddLine(V2(min.x + 9, min.y + 5), V2(min.x + 3, min.y + 13), blue, 2.5)
-        dl:AddLine(V2(min.x + 3, min.y + 13), V2(min.x + 9, min.y + 21), blue, 2.5)
-        local backLabel = (page == "music" and musicView == "tracks") and "Playlist" or "Beranda"
-        dl:AddText(V2(min.x + 18, min.y + 5), blue, backLabel)
+        dl:AddLine(V2(min.x + 9, min.y + 4), V2(min.x + 3, min.y + 12), blue, 2.5)
+        dl:AddLine(V2(min.x + 3, min.y + 12), V2(min.x + 9, min.y + 20), blue, 2.5)
+        local backLabel = "Beranda"
+        if page == "music" and musicView == "tracks" then backLabel = "Playlist"
+        elseif page == "photos" and photosView ~= "albums" then backLabel = "Album" end
+        dl:AddText(V2(min.x + 18, min.y + 4), blue, backLabel)
         if clicked then goBack() end
-        local tp = imgui.GetCursorScreenPos()
-        local availW = imgui.GetContentRegionAvail().x
-        imgui.SetWindowFontScale(1.8)
+        imgui.SetWindowFontScale(1.65)
         imgui.TextColored(K.white, title)
         imgui.SetWindowFontScale(1)
-        if app then
-            miniSquircle(imgui.GetWindowDrawList(), tp.x + availW - 34, tp.y, 32, app)
-        end
         imgui.Spacing()
     end
 
@@ -1585,8 +1691,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         A.gA = saved * math.min(1, math.max(0, t))
         local x, y = min.x, min.y + (1 - t) * 40
         dl:AddRectFilled(V2(x, y), V2(x + avail, y + h - 2), U(0.10, 0.10, 0.14, 0.66), 20)
-        dl:AddRect(V2(x, y), V2(x + avail, y + h - 2), U(1, 1, 1, imgui.IsItemHovered() and 0.30 or 0.16), 20, 0, 1)
-        dl:AddLine(V2(x + 18, y + 1), V2(x + avail - 18, y + 1), U(1, 1, 1, 0.14), 1)
         miniSquircle(dl, x + 12, y + 13, 38, notifApp(n.kind))
         local ago = agoText(n.stamp)
         local as = imgui.CalcTextSize(ago)
@@ -1615,7 +1719,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
 
         imgui.SetCursorPosY(imgui.GetCursorPosY() + (1 - enter) * 14)
         centerText(dateString(), V4(1, 1, 1, 0.88), 1.12)
-        centerText(os.date("%H:%M"), K.white, 4.6)
+        centerText(os.date("%H:%M"), K.white, 4.3)
 
         imgui.SetCursorPosY(imgui.GetCursorPosY() + 12)
         local shown = 0
@@ -1668,89 +1772,194 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         drawStatus()
     end
 
+    ------------------------------------------------------------------ cuaca (widget beranda + Maps)
+    local WX = {}
+    function WX.info()
+        local id
+        pcall(function() id = readMemory(0xC81320, 2, false) end)
+        local label, base = "Cerah", 29
+        if id then
+            if id == 8 or id == 16 then label, base = "Hujan", 23
+            elseif id == 9 then label, base = "Berkabut", 24
+            elseif id == 4 or id == 7 then label, base = "Berawan", 27
+            elseif id == 19 then label, base = "Badai pasir", 33
+            elseif id == 11 or id == 17 or id == 18 then label, base = "Panas terik", 34
+            elseif id >= 12 and id <= 15 then label, base = "Berkabut tipis", 26
+            elseif id == 0 or id == 1 or id == 6 or id == 10 then label, base = "Cerah", 30
+            else label, base = "Cerah berawan", 28 end
+        end
+        return label, base, id
+    end
+    function WX.kind(id)
+        if id == 8 or id == 16 then return "rain" end
+        if id == 4 or id == 7 or id == 9 or (id and id >= 12 and id <= 15) then return "cloud" end
+        return "clear"
+    end
+    function WX.tempAt(hour, base)
+        return math.floor(base - 4 + 6 * math.sin((hour - 9) / 24 * math.pi * 2) + 0.5)
+    end
+    function WX.degree(dl, x, y, r, col)
+        dl:AddCircle(V2(x, y), r, col, 12, 1.6)
+    end
+    function WX.glyph(dl, cx, cy, r, kind)
+        if kind == "sun" then
+            dl:AddCircleFilled(V2(cx, cy), r * 0.55, U(1, 0.80, 0.18, 1), 20)
+            for i = 0, 7 do
+                local a = i / 8 * math.pi * 2
+                dl:AddLine(V2(cx + math.cos(a) * r * 0.78, cy + math.sin(a) * r * 0.78),
+                    V2(cx + math.cos(a) * r, cy + math.sin(a) * r), U(1, 0.80, 0.18, 1), 1.4)
+            end
+        elseif kind == "moon" then
+            dl:AddCircleFilled(V2(cx, cy), r * 0.62, U(0.93, 0.94, 1, 1), 20)
+            dl:AddCircleFilled(V2(cx - r * 0.18, cy - r * 0.10), r * 0.14, U(0.80, 0.82, 0.95, 1), 10)
+        else
+            local w = U(1, 1, 1, 0.95)
+            dl:AddCircleFilled(V2(cx - r * 0.30, cy + r * 0.05), r * 0.42, w, 18)
+            dl:AddCircleFilled(V2(cx + r * 0.15, cy - r * 0.18), r * 0.52, w, 18)
+            dl:AddCircleFilled(V2(cx + r * 0.50, cy + r * 0.10), r * 0.38, w, 18)
+            dl:AddRectFilled(V2(cx - r * 0.30, cy + r * 0.12), V2(cx + r * 0.50, cy + r * 0.48), w, r * 0.1)
+            if kind == "rain" then
+                for i = 0, 2 do
+                    dl:AddLine(V2(cx - r * 0.35 + i * r * 0.35, cy + r * 0.62),
+                        V2(cx - r * 0.45 + i * r * 0.35, cy + r * 0.95), U(0.55, 0.75, 1, 1), 1.6)
+                end
+            end
+        end
+    end
+
+    do
+    local homeOrder = {}
+    for _, app in ipairs(apps) do
+        if not inDock[app.id] then homeOrder[#homeOrder + 1] = app end
+    end
+    local HOME_PER_PAGE = 8
+    local HOME_PAGES = math.max(1, math.ceil(#homeOrder / HOME_PER_PAGE))
+
     pages.home = function()
         local win = imgui.GetWindowSize()
         local avail = imgui.GetContentRegionAvail().x
         local dl = imgui.GetWindowDrawList()
         local enter = ease((A.t - math.max(A.pageAt, openedAt)) / 0.5)
-        local gap = 12
-        local wsz = (avail - gap) / 2
-        local p = imgui.GetCursorScreenPos()
-        imgui.Dummy(V2(avail, wsz))
-
-        local inset = wsz * (1 - (0.88 + 0.12 * enter)) / 2
         local saved = A.gA
-        A.gA = saved * enter
-
-        -- widget jam analog
-        local x0, y0 = p.x + inset, p.y + inset
-        local x1, y1 = p.x + wsz - inset, p.y + wsz - inset
-        dl:AddRectFilled(V2(x0, y0), V2(x1, y1), U(1, 1, 1, 0.17), 24)
-        dl:AddRect(V2(x0, y0), V2(x1, y1), U(1, 1, 1, 0.14), 24, 0, 1)
-        local ccx, ccy = (x0 + x1) / 2, (y0 + y1) / 2
-        local cr = (x1 - x0) / 2 - 14
-        dl:AddCircleFilled(V2(ccx, ccy), cr, U(0, 0, 0, 0.32), 48)
-        for i = 0, 11 do
-            local a = i / 12 * math.pi * 2
-            local major = i % 3 == 0
-            local r0 = cr * (major and 0.80 or 0.87)
-            dl:AddLine(V2(ccx + math.cos(a) * r0, ccy + math.sin(a) * r0),
-                V2(ccx + math.cos(a) * cr * 0.95, ccy + math.sin(a) * cr * 0.95),
-                U(1, 1, 1, major and 0.95 or 0.50), major and 2.2 or 1.2)
-        end
         local tm = os.date("*t")
-        local ha = ((tm.hour % 12) + tm.min / 60) / 12 * math.pi * 2 - math.pi / 2
-        local ma = (tm.min + tm.sec / 60) / 60 * math.pi * 2 - math.pi / 2
-        local sa = tm.sec / 60 * math.pi * 2 - math.pi / 2
-        dl:AddLine(V2(ccx, ccy), V2(ccx + math.cos(ha) * cr * 0.50, ccy + math.sin(ha) * cr * 0.50), U(1, 1, 1, 1), 3.4)
-        dl:AddLine(V2(ccx, ccy), V2(ccx + math.cos(ma) * cr * 0.76, ccy + math.sin(ma) * cr * 0.76), U(1, 1, 1, 1), 2.4)
-        dl:AddLine(V2(ccx - math.cos(sa) * cr * 0.14, ccy - math.sin(sa) * cr * 0.14),
-            V2(ccx + math.cos(sa) * cr * 0.84, ccy + math.sin(sa) * cr * 0.84), U(1, 0.60, 0.04, 1), 1.4)
-        dl:AddCircleFilled(V2(ccx, ccy), 3.4, U(1, 0.60, 0.04, 1), 14)
 
-        -- widget kalender
-        local qx0, qy0 = p.x + wsz + gap + inset, p.y + inset
-        local qx1, qy1 = p.x + wsz * 2 + gap - inset, p.y + wsz - inset
-        dl:AddRectFilled(V2(qx0, qy0), V2(qx1, qy1), U(1, 1, 1, 0.17), 24)
-        dl:AddRect(V2(qx0, qy0), V2(qx1, qy1), U(1, 1, 1, 0.14), 24, 0, 1)
-        local qcx = (qx0 + qx1) / 2
-        dlTextC(dl, string.upper(DAYS[tm.wday]), qcx, qy0 + 14, U(1, 0.36, 0.31, 1), 1.0)
-        dlTextC(dl, tostring(tm.day), qcx, qy0 + 32, U(1, 1, 1, 1), 3.2)
-        dlTextC(dl, MONTHS[tm.month], qcx, qy0 + 82, U(1, 1, 1, 0.80), 1.0)
-        dlTextC(dl, phoneNumber > 0 and ("+" .. phoneNumber) or "-", qcx, qy1 - 22, U(1, 1, 1, 0.55), 0.9)
-        A.gA = saved
+        -- scroll mouse = ganti halaman beranda
+        local wheel = imgui.GetIO().MouseWheel
+        if wheel ~= 0 and imgui.IsWindowHovered() then
+            homePage = math.max(1, math.min(HOME_PAGES, homePage + (wheel < 0 and 1 or -1)))
+        end
 
-        imgui.Dummy(V2(1, 6))
+        if homePage == 1 then
+            local condition, base, wid = WX.info()
+            local kindNow = WX.kind(wid)
+            local night = tm.hour < 6 or tm.hour >= 18
+            local wh = 124
+            local p = imgui.GetCursorScreenPos()
+            imgui.Dummy(V2(avail, wh))
+            A.gA = saved * enter
+            local top = night and { 0.10, 0.12, 0.32 } or { 0.20, 0.45, 0.90 }
+            local bot = night and { 0.22, 0.10, 0.40 } or { 0.50, 0.32, 0.82 }
+            gradientRounded(dl, p.x, p.y, avail, wh, 22,
+                U(top[1], top[2], top[3], 1), U(bot[1], bot[2], bot[3], 1))
+            dlText(dl, "Los Santos", p.x + 14, p.y + 9, U(1, 1, 1, 0.95), 0.95)
+            local tempText = tostring(WX.tempAt(tm.hour + tm.min / 60, base))
+            imgui.SetWindowFontScale(2.4)
+            local ts = imgui.CalcTextSize(tempText)
+            imgui.SetWindowFontScale(1)
+            dlText(dl, tempText, p.x + 14, p.y + 22, U(1, 1, 1, 1), 2.4)
+            WX.degree(dl, p.x + 14 + ts.x + 5, p.y + 30, 3.6, U(1, 1, 1, 1))
+            -- kondisi saat ini (kanan)
+            local nowKind = night and (kindNow == "clear" and "moon" or kindNow) or (kindNow == "clear" and "sun" or kindNow)
+            WX.glyph(dl, p.x + avail - 26, p.y + 26, 13, nowKind)
+            local cs = imgui.CalcTextSize(condition)
+            dl:AddText(V2(p.x + avail - cs.x - 14, p.y + 44), U(1, 1, 1, 0.95), condition)
+            local hl = "Maks " .. WX.tempAt(15, base) .. "  Min " .. WX.tempAt(3, base)
+            local hs = imgui.CalcTextSize(hl)
+            dl:AddText(V2(p.x + avail - hs.x - 14, p.y + 58), U(1, 1, 1, 0.75), hl)
+            -- prakiraan per jam
+            local colW = (avail - 16) / 6
+            for i = 0, 5 do
+                local hour = (tm.hour + i) % 24
+                local cx = p.x + 8 + colW * (i + 0.5)
+                local label = i == 0 and "Skrg" or string.format("%02d", hour)
+                dlTextC(dl, label, cx, p.y + 80, U(1, 1, 1, i == 0 and 1 or 0.75), 0.8)
+                local hn = hour < 6 or hour >= 18
+                WX.glyph(dl, cx, p.y + 101, 7, hn and (kindNow == "clear" and "moon" or kindNow)
+                    or (kindNow == "clear" and "sun" or kindNow))
+                dlTextC(dl, tostring(WX.tempAt(hour, base)), cx - 1, p.y + 108, U(1, 1, 1, 0.95), 0.8)
+            end
+            A.gA = saved
+            imgui.Dummy(V2(1, 6))
+
+            -- widget foto
+            local ph = 90
+            local pp = imgui.GetCursorScreenPos()
+            local pclicked = imgui.InvisibleButton("##home_photos_widget", V2(avail, ph))
+            hoverKey("##home_photos_widget")
+            A.gA = saved * enter
+            dl:AddRectFilled(pp, V2(pp.x + avail, pp.y + ph),
+                U(0.05, 0.05, 0.10, imgui.IsItemHovered() and 0.72 or 0.60), 22)
+            drawSquircle(dl, pp.x + 12, pp.y + 9, 14, appById.photos, false)
+            dlText(dl, "FOTO", pp.x + 32, pp.y + 9, U(1, 1, 1, 0.65), 0.85)
+            local localPhotos = photoMedia.photos()
+            local count, tg = 4, 6
+            local tsz = (avail - 24 - tg * (count - 1)) / count
+            for i = 1, count do
+                local tx = pp.x + 12 + (i - 1) * (tsz + tg)
+                local ty = pp.y + 28
+                local photo = localPhotos[i]
+                local tex = photo and photoTexture(photo) or nil
+                if tex then
+                    drawPhoto(dl, tex, tx, ty, tx + tsz, ty + tsz, 9)
+                else
+                    local r, g, b = hsv((i * 0.13 + 0.55) % 1, 0.35, 0.55)
+                    dl:AddRectFilled(V2(tx, ty), V2(tx + tsz, ty + tsz), U(r, g, b, 0.55), 9)
+                end
+            end
+            A.gA = saved
+            if pclicked then phoneAction("photos") end
+            imgui.Dummy(V2(1, 6))
+        else
+            imgui.Dummy(V2(1, 10))
+        end
+
+        -- grid aplikasi
         local cols, cgap = 4, 4
-        local cellW = (imgui.GetContentRegionAvail().x - cgap * (cols - 1)) / cols
+        local cellW = (avail - cgap * (cols - 1)) / cols
+        local first = (homePage - 1) * HOME_PER_PAGE + 1
         local n = 0
-        for _, app in ipairs(apps) do
-            if not inDock[app.id] then
-                if n % cols ~= 0 then imgui.SameLine(0, cgap) end
-                if drawAppIcon(app, cellW, 84, true, n) then phoneAction(app.id) end
-                n = n + 1
+        for i = first, math.min(#homeOrder, first + HOME_PER_PAGE - 1) do
+            if n % cols ~= 0 then imgui.SameLine(0, cgap) end
+            if drawAppIcon(homeOrder[i], cellW, 78, true, n) then phoneAction(homeOrder[i].id) end
+            n = n + 1
+        end
+
+        -- titik halaman (bisa diklik)
+        if HOME_PAGES > 1 then
+            local dotsW = (HOME_PAGES - 1) * 16
+            imgui.SetCursorPosY(win.y - 102)
+            local dp = imgui.GetCursorScreenPos()
+            for i = 1, HOME_PAGES do
+                local dx = dp.x + avail / 2 - dotsW / 2 + (i - 1) * 16
+                imgui.SetCursorScreenPos(V2(dx - 8, dp.y - 4))
+                if imgui.InvisibleButton("##home_dot" .. i, V2(16, 16)) then homePage = i end
+                dl:AddCircleFilled(V2(dx, dp.y + 4), 3.2, U(1, 1, 1, i == homePage and 0.95 or 0.38), 12)
             end
         end
 
-        -- titik halaman
-        imgui.SetCursorPosY(win.y - 112)
-        local dp = imgui.GetCursorScreenPos()
-        dl:AddCircleFilled(V2(dp.x + avail / 2 - 7, dp.y + 4), 3.2, U(1, 1, 1, 0.95), 12)
-        dl:AddCircleFilled(V2(dp.x + avail / 2 + 7, dp.y + 4), 3.2, U(1, 1, 1, 0.38), 12)
-
         -- dock kaca
-        imgui.SetCursorPosY(win.y - 92)
+        imgui.SetCursorPosY(win.y - 80)
         local dockW = imgui.GetContentRegionAvail().x
         local dpos = imgui.GetCursorScreenPos()
-        dl:AddRectFilled(dpos, V2(dpos.x + dockW, dpos.y + 80), U(1, 1, 1, 0.20), 28)
-        dl:AddRect(dpos, V2(dpos.x + dockW, dpos.y + 80), U(1, 1, 1, 0.16), 28, 0, 1)
-        imgui.SetCursorScreenPos(V2(dpos.x + 10, dpos.y + 11))
-        local dockCell = (dockW - 20 - cgap * 3) / 4
+        dl:AddRectFilled(dpos, V2(dpos.x + dockW, dpos.y + 72), U(1, 1, 1, 0.20), 26)
+        imgui.SetCursorScreenPos(V2(dpos.x + 8, dpos.y + 10))
+        local dockCell = (dockW - 16 - cgap * 3) / 4
         for i, id in ipairs(dockOrder) do
             if i > 1 then imgui.SameLine(0, cgap) end
-            if drawAppIcon(appById[id], dockCell, 60, false, 12 + i) then phoneAction(id) end
+            if drawAppIcon(appById[id], dockCell, 56, false, 12 + i) then phoneAction(id) end
         end
         drawStatus()
+    end
     end
 
     pages.contacts = function()
@@ -1768,7 +1977,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             end
             dl:AddText(V2(min.x + 52, min.y + 10), U(0.96, 0.97, 1, 1), fitText(contact.name, avail - 150))
             dl:AddText(V2(min.x + 52, min.y + 29), U(0.62, 0.67, 0.76, 1), tostring(contact.number))
-            dl:AddLine(V2(min.x + 52, min.y + 55), V2(min.x + avail - 84, min.y + 55), U(1, 1, 1, 0.06), 1)
             if clicked then openChat(contact.number) end
             imgui.SameLine(0, 0)
             if circleButton("##contact_call" .. index, 34, KIND.success[1], KIND.success[2], "phone", 42, 56) then
@@ -1826,7 +2034,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         imgui.Dummy(V2(1, 2))
 
         local avail = imgui.GetContentRegionAvail().x
-        local d = math.min(70, (avail - 36) / 3)
+        local d = math.min(62, (avail - 36) / 3)
         local gap = (avail - d * 3) / 2
         for i, key in ipairs(KEYS) do
             if (i - 1) % 3 ~= 0 then imgui.SameLine(0, gap) end
@@ -1900,7 +2108,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
                     local ts = imgui.CalcTextSize(txt)
                     dl:AddText(V2(min.x + avail - 18 - ts.x / 2, min.y + 28 - ts.y / 2), U(1, 1, 1, 1), txt)
                 end
-                dl:AddLine(V2(min.x + 56, min.y + 55), V2(min.x + avail, min.y + 55), U(1, 1, 1, 0.06), 1)
                 if clicked then openChat(contact.number) end
                 imgui.PopID()
             end
@@ -1945,7 +2152,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             videoCall = true
             status = "Memulai panggilan video roleplay..."
         end
-        imgui.Separator()
+        imgui.Dummy(V2(1, 4))
 
         local histH = math.max(80, imgui.GetContentRegionAvail().y - 62)
         imgui.PushStyleColor(imgui.Col.ChildBg, K.clear)
@@ -2054,7 +2261,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             local size = V2(avail, 210)
             imgui.Dummy(size)
             dl:AddRectFilled(V2(p.x, p.y + 10), V2(p.x + size.x, p.y + 10 + size.y), U(0.06, 0.08, 0.12, 1), 20)
-            dl:AddRect(V2(p.x, p.y + 10), V2(p.x + size.x, p.y + 10 + size.y), U(1, 1, 1, 0.12), 20, 0, 1)
             avatar(dl, cx, p.y + 58, 30, label)
             local now = os.clock()
             local live = callState == "ACTIVE" and videoPeer and now - videoPeer.updatedAt <= 4
@@ -2161,111 +2367,119 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         drawStatus()
     end
 
+    ------------------------------------------------------------------ KAMERA (gaya iPhone)
     pages.camera = function()
-        header("Kamera")
-        local avail = imgui.GetContentRegionAvail()
-        local vfH = math.max(115, avail.y - 225)
+        local win = imgui.GetWindowSize()
+        local wp = imgui.GetWindowPos()
+        local dl = imgui.GetWindowDrawList()
+        local vx0, vx1 = wp.x, wp.x + win.x
+        local vy0 = wp.y + 30
+        local vh = math.max(160, win.y - 30 - 142)
+        local vy1 = vy0 + vh
+        local yellow = U(1, 0.84, 0.04, 1)
         local timerSeconds = cameraTimerModes[cameraTimerIndex]
-        local timerLabel = timerSeconds == 0 and "TIMER OFF" or ("TIMER " .. timerSeconds .. "s")
 
-        imgui.TextColored(V4(1, 0.84, 0.04, 1), "SAO CAMERA")
-        imgui.SameLine()
-        imgui.TextColored(K.muted, "FOTO LOKAL")
-        imgui.SameLine(imgui.GetContentRegionAvail().x - 4)
-        imgui.TextColored(K.muted, "FOV")
-        local toolbarWidth = (avail.x - 12) / 3
-        if pillButton(timerLabel .. "##phone_camera_timer", toolbarWidth, 28,
-            timerSeconds == 0 and "glass" or "primary") then
-            cameraTimerIndex = cameraTimerIndex % #cameraTimerModes + 1
-            timerSeconds = cameraTimerModes[cameraTimerIndex]
+        -- bar atas: grid & tags
+        local function topButton(id, x, w, active, label)
+            imgui.SetCursorScreenPos(V2(x, wp.y + 4))
+            local clicked = imgui.InvisibleButton(id, V2(w, 22))
+            hoverKey(id)
+            local col = active and yellow or U(1, 1, 1, imgui.IsItemHovered() and 0.95 or 0.72)
+            dlTextC(dl, label, x + w / 2, wp.y + 8, col, 0.85)
+            return clicked
         end
-        imgui.SameLine(0, 6)
-        if pillButton((cameraGridEnabled and "GRID ON" or "GRID OFF") .. "##phone_camera_grid",
-            toolbarWidth, 28, cameraGridEnabled and "primary" or "glass") then
+        if topButton("##cam_grid", wp.x, win.x / 2, cameraGridEnabled, "GRID") then
             cameraGridEnabled = not cameraGridEnabled
         end
-        imgui.SameLine(0, 6)
-        if pillButton((cameraTagsEnabled and "TAGS ON" or "TAGS OFF") .. "##phone_camera_tags",
-            toolbarWidth, 28, cameraTagsEnabled and "primary" or "glass") then
+        if topButton("##cam_tags", wp.x + win.x / 2, win.x / 2, cameraTagsEnabled, "TAGS") then
             cameraTagsEnabled = not cameraTagsEnabled
         end
 
-        imgui.Spacing()
-        local p = imgui.GetCursorScreenPos()
-        imgui.Dummy(V2(avail.x, vfH))
-        local dl = imgui.GetWindowDrawList()
-        local x0, y0, x1, y1 = p.x, p.y, p.x + avail.x, p.y + vfH
-        gradientRounded(dl, x0, y0, avail.x, vfH, 20, U(0.07, 0.07, 0.09, 1), U(0.01, 0.01, 0.02, 1))
-        dl:AddRect(V2(x0, y0), V2(x1, y1), U(1, 1, 1, 0.12), 20, 0, 1)
+        -- viewfinder
+        gradientRounded(dl, vx0, vy0, win.x, vh, 0, U(0.10, 0.10, 0.13, 1), U(0.02, 0.02, 0.04, 1))
         if cameraGridEnabled then
             local gc = U(1, 1, 1, 0.20)
             for i = 1, 2 do
-                dl:AddLine(V2(x0 + avail.x * i / 3, y0 + 12),
-                    V2(x0 + avail.x * i / 3, y1 - 12), gc, 1)
-                dl:AddLine(V2(x0 + 12, y0 + vfH * i / 3),
-                    V2(x1 - 12, y0 + vfH * i / 3), gc, 1)
+                dl:AddLine(V2(vx0 + win.x * i / 3, vy0), V2(vx0 + win.x * i / 3, vy1), gc, 1)
+                dl:AddLine(V2(vx0, vy0 + vh * i / 3), V2(vx1, vy0 + vh * i / 3), gc, 1)
             end
         end
-        local cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-        local fs = 38 + math.sin(A.t * 2.4) * 2
-        dl:AddCircle(V2(cx, cy), fs, U(1, 0.84, 0.04, 0.75), 48, 1.6)
-        dl:AddRectFilled(V2(cx - 16, y1 - 52), V2(cx + 16, y1 - 30), U(0, 0, 0, 0.45), 11)
-        dlTextC(dl, tostring(photoMedia.zoom()) .. "x", cx, y1 - 49, U(1, 0.84, 0.04, 1), 0.95)
-        dl:AddRectFilled(V2(x0 + 12, y0 + 12), V2(x0 + 102, y0 + 34), U(0, 0, 0, 0.42), 11)
-        dlText(dl, "SAO CAMERA", x0 + 21, y0 + 16, U(1, 1, 1, 0.88), 0.78)
+        local cx, cy = (vx0 + vx1) / 2, (vy0 + vy1) / 2
+        local fs = 32 + math.sin(A.t * 2.4) * 1.5
+        dl:AddRect(V2(cx - fs, cy - fs), V2(cx + fs, cy + fs), U(1, 0.84, 0.04, 0.80), 0, 0, 1.4)
+        dl:AddRectFilled(V2(vx0 + 10, vy0 + 10), V2(vx0 + 88, vy0 + 28), U(0, 0, 0, 0.42), 9)
+        dlText(dl, "SAO CAMERA", vx0 + 17, vy0 + 13, U(1, 1, 1, 0.88), 0.72)
         if cameraTagsEnabled then
-            dl:AddRectFilled(V2(x1 - 94, y0 + 12), V2(x1 - 12, y0 + 34), U(0, 0, 0, 0.42), 11)
-            dlTextC(dl, "TAGS", x1 - 53, y0 + 16, U(1, 0.84, 0.04, 0.95), 0.78)
+            dl:AddRectFilled(V2(vx1 - 54, vy0 + 10), V2(vx1 - 10, vy0 + 28), U(0, 0, 0, 0.42), 9)
+            dlTextC(dl, "TAGS", vx1 - 32, vy0 + 13, U(1, 0.84, 0.04, 0.95), 0.72)
         end
-        dlTextC(dl, "KONTROL FOTO GAME • HASIL VIA F8", cx, cy + fs + 12,
-            U(1, 1, 1, 0.66), 0.76)
+        dlTextC(dl, "FOTO GAME - HASIL VIA F8", cx, cy + fs + 10, U(1, 1, 1, 0.55), 0.72)
         local flash = 1 - (A.t - A.shutterAt) / 0.28
-        if flash > 0 then dl:AddRectFilled(V2(x0, y0), V2(x1, y1), U(1, 1, 1, flash * 0.85), 20) end
+        if flash > 0 then dl:AddRectFilled(V2(vx0, vy0), V2(vx1, vy1), U(1, 1, 1, flash * 0.85), 0) end
 
-        imgui.Spacing()
+        -- pil zoom
         local zoomChoices = { 0.5, 1, 2 }
-        local zoomWidth = (avail.x - 16) / #zoomChoices
+        local zw = 34
+        local zx = cx - (#zoomChoices * zw + (#zoomChoices - 1) * 6) / 2
         for index, value in ipairs(zoomChoices) do
-            if index > 1 then imgui.SameLine(0, 8) end
-            local label = (value == 0.5 and "0,5x" or tostring(value) .. "x")
-                .. "##phone_zoom_" .. tostring(value)
-            if pillButton(label, zoomWidth, 28, photoMedia.zoom() == value and "primary" or "glass") then
-                photoMedia.setZoom(value)
+            local bx = zx + (index - 1) * (zw + 6)
+            imgui.SetCursorScreenPos(V2(bx, vy1 - 46))
+            local clicked = imgui.InvisibleButton("##cam_zoom" .. index, V2(zw, 32))
+            hoverKey("##cam_zoom" .. index)
+            local sel = photoMedia.zoom() == value
+            local zcx, zcy = bx + zw / 2, vy1 - 30
+            dl:AddCircleFilled(V2(zcx, zcy), sel and 15 or 12, U(0, 0, 0, 0.45), 24)
+            local label = (value == 0.5 and "0,5" or tostring(value)) .. (sel and "x" or "")
+            dlTextC(dl, label, zcx, zcy - 6, sel and yellow or U(1, 1, 1, 0.95), sel and 0.85 or 0.78)
+            if clicked then photoMedia.setZoom(value) end
+        end
+
+        -- mode (pose karakter) + PHOTO
+        local modes = { { "SANTAI", "Santai" }, { "LAMBAI", "Lambai" }, { "DUDUK", "Duduk" }, { "PHOTO", nil } }
+        local mw = win.x / #modes
+        for i, m in ipairs(modes) do
+            imgui.SetCursorScreenPos(V2(wp.x + (i - 1) * mw, vy1 + 6))
+            local clicked = imgui.InvisibleButton("##cam_mode" .. i, V2(mw, 22))
+            hoverKey("##cam_mode" .. i)
+            local sel = m[2] == nil
+            dlTextC(dl, m[1], wp.x + (i - 0.5) * mw, vy1 + 11, sel and yellow or U(1, 1, 1, 0.70), 0.8)
+            if clicked and m[2] then
+                sendChat("/e " .. m[2])
+                cameraActionStatus = "Pose " .. m[2] .. " dikirim; karakter harus di kaki."
             end
         end
-        imgui.TextColored(K.muted, "POSE KARAKTER")
-        local poses = {
-            { label = "Santai", anim = "Santai" },
-            { label = "Melambai", anim = "Lambai" },
-            { label = "Duduk", anim = "Duduk" }
-        }
-        local poseWidth = (avail.x - 12) / #poses
-        for index, pose in ipairs(poses) do
-            if index > 1 then imgui.SameLine(0, 6) end
-            if pillButton(pose.label .. "##phone_pose_" .. pose.anim, poseWidth, 26, "glass") then
-                sendChat("/e " .. pose.anim)
-                cameraActionStatus = "Pose " .. pose.label .. " dikirim; karakter harus di kaki."
-            end
-        end
-        imgui.Dummy(V2(1, 2))
+
+        -- baris bawah: thumbnail album, rana, timer
+        local rowY = vy1 + 38
         local busy = photoMedia.isBusy()
-        local controlsWidth = avail.x
-        local sideWidth = 64
         local d = 56
-        imgui.SetCursorPosX(imgui.GetCursorPosX() + (controlsWidth - sideWidth * 2 - d) / 2)
-        if pillButton("ALBUM##phone_camera_album", sideWidth, 38, "glass") then
+        local localPhotos = photoMedia.photos()
+        imgui.SetCursorScreenPos(V2(wp.x + 22, rowY + 6))
+        if imgui.InvisibleButton("##cam_album", V2(44, 44)) then
             photoMedia.refresh()
+            photoMedia.restoreCamera()
             selectedPhoto = 1
+            photosView = "albums"
+            photosFilter = "recents"
+            NS.navDir = 1
             page = "photos"
             cameraCaptureAt = nil
         end
-        imgui.SameLine(0, 12)
+        hoverKey("##cam_album")
+        local last = localPhotos[1]
+        local ltex = last and photoTexture(last) or nil
+        if ltex then
+            drawPhoto(dl, ltex, wp.x + 22, rowY + 6, wp.x + 66, rowY + 50, 9)
+        else
+            dl:AddRectFilled(V2(wp.x + 22, rowY + 6), V2(wp.x + 66, rowY + 50), U(1, 1, 1, 0.14), 9)
+        end
+
+        imgui.SetCursorScreenPos(V2(cx - d / 2, rowY))
         local clicked = imgui.InvisibleButton("##phone_camera", V2(d, d))
         hoverKey("##phone_camera")
-        local min = imgui.GetItemRectMin()
-        local sc = V2(min.x + d / 2, min.y + d / 2)
+        local sc = V2(cx, rowY + d / 2)
         dl:AddCircle(sc, d / 2 - 1, U(1, 1, 1, 0.96), 48, 3.2)
-        dl:AddCircleFilled(sc, (d / 2 - 8) * (imgui.IsItemActive() and 0.86 or 1),
+        dl:AddCircleFilled(sc, (d / 2 - 7) * (imgui.IsItemActive() and 0.86 or 1),
             busy and U(0.55, 0.57, 0.62, 1) or U(1, 1, 1, 1), 40)
         if clicked and not busy then
             cameraActionStatus = ""
@@ -2277,19 +2491,32 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
                 A.shutterAt = A.t
             end
         end
-        imgui.SameLine(0, 12)
-        if pillButton("POSE##phone_camera_pose", sideWidth, 38, "glass") then
-            sendChat("/e Santai")
-            cameraActionStatus = "Pose Santai dikirim; karakter harus di kaki."
+
+        -- timer (kanan rana)
+        local tx = vx1 - 44
+        imgui.SetCursorScreenPos(V2(tx - 22, rowY + 6))
+        if imgui.InvisibleButton("##cam_timer", V2(44, 44)) then
+            cameraTimerIndex = cameraTimerIndex % #cameraTimerModes + 1
+            timerSeconds = cameraTimerModes[cameraTimerIndex]
         end
+        hoverKey("##cam_timer")
+        local tcy = rowY + 28
+        dl:AddCircleFilled(V2(tx, tcy), 19, U(1, 1, 1, imgui.IsItemHovered() and 0.26 or 0.16), 28)
+        local tcol = timerSeconds > 0 and yellow or U(1, 1, 1, 0.9)
+        if timerSeconds > 0 then
+            dlTextC(dl, tostring(timerSeconds) .. "s", tx, tcy - 6, tcol, 0.9)
+        else
+            dl:AddCircle(V2(tx, tcy), 8, tcol, 20, 1.8)
+            dl:AddLine(V2(tx, tcy), V2(tx, tcy - 5), tcol, 1.8)
+            dl:AddLine(V2(tx, tcy), V2(tx + 3.5, tcy + 2), tcol, 1.8)
+        end
+
         if cameraCaptureAt then
             local remaining = cameraCaptureAt - os.clock()
             if remaining <= 0 then
                 cameraCaptureAt = nil
                 photoMedia.capture()
                 A.shutterAt = A.t
-            else
-                status = string.format("Foto diambil dalam %d detik...", math.ceil(remaining))
             end
         end
         if photoMedia.cameraStatus() ~= "" then
@@ -2302,70 +2529,613 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         else
             status = photoMedia.status()
         end
-        drawStatus()
+        if status ~= "" then
+            local msg = fitText(status, (win.x - 28) / 0.78)
+            dlTextC(dl, msg, cx, vy0 + 36, U(1, 0.84, 0.04, 0.95), 0.78)
+        end
+    end
+
+    ------------------------------------------------------------------ FOTO (album gaya iPhone)
+    do
+    local function drawHeart(dl, cx, cy, r, col)
+        dl:AddCircleFilled(V2(cx - r * 0.5, cy - r * 0.25), r * 0.55, col, 16)
+        dl:AddCircleFilled(V2(cx + r * 0.5, cy - r * 0.25), r * 0.55, col, 16)
+        dl:AddTriangleFilled(V2(cx - r * 1.02, cy - r * 0.05), V2(cx + r * 1.02, cy - r * 0.05),
+            V2(cx, cy + r * 1.05), col)
+    end
+
+    local function photosFiltered()
+        local all = photoMedia.photos()
+        if photosFilter == "favs" then
+            local list = {}
+            for _, ph in ipairs(all) do
+                if favPhotos[ph.path] then list[#list + 1] = ph end
+            end
+            return list, all
+        end
+        return all, all
     end
 
     pages.photos = function()
-        header("Foto")
-        if pillButton("SEGARKAN ALBUM##phone_photos_refresh", -1, 32, "glass") then
-            photoMedia.refresh()
-        end
-        local localPhotos = photoMedia.photos()
-        imgui.TextColored(K.muted, "Foto lokal: " .. #localPhotos)
-        local budget = 2
-        local function texture(photo)
-            local tex = photoTextures[photo.path]
-            if tex ~= nil then return tex or nil end
-            if budget <= 0 then return nil end
-            budget = budget - 1
-            local ok, loaded = pcall(imgui.CreateTextureFromFile, photo.path)
-            photoTextures[photo.path] = (ok and loaded) or false
-            return photoTextures[photo.path] or nil
-        end
-        if #localPhotos == 0 then
-            imgui.Spacing()
-            imgui.TextColored(K.muted, "Album kosong. Ambil foto dari aplikasi Kamera.")
-        else
-            if selectedPhoto > #localPhotos then selectedPhoto = 1 end
-            local avail = imgui.GetContentRegionAvail().x
-            local current = localPhotos[selectedPhoto]
-            local p = imgui.GetCursorScreenPos()
-            imgui.Dummy(V2(avail, 168))
-            local dl = imgui.GetWindowDrawList()
-            dl:AddRectFilled(p, V2(p.x + avail, p.y + 168), U(0.04, 0.05, 0.07, 1), 14)
-            local tex = texture(current)
-            if tex then dl:AddImage(tex, p, V2(p.x + avail, p.y + 168)) end
-            dl:AddRect(p, V2(p.x + avail, p.y + 168), U(1, 1, 1, 0.14), 14, 0, 1)
-            local counter = selectedPhoto .. " / " .. #localPhotos
-            local cs = imgui.CalcTextSize(counter)
-            dl:AddRectFilled(V2(p.x + avail - cs.x - 22, p.y + 10), V2(p.x + avail - 10, p.y + 32), U(0, 0, 0, 0.5), 11)
-            dl:AddText(V2(p.x + avail - cs.x - 16, p.y + 14), U(1, 1, 1, 0.95), counter)
-            imgui.Spacing()
+        local list, all = photosFiltered()
+        local avail = imgui.GetContentRegionAvail().x
+        local dl = imgui.GetWindowDrawList()
+        local blue = U(0.30, 0.62, 1, 1)
 
-            local columns, gap = 3, 6
-            local cellW = (avail - gap * (columns - 1)) / columns
-            local cellH = cellW * 0.78
-            for index, photo in ipairs(localPhotos) do
-                if (index - 1) % columns ~= 0 then imgui.SameLine(0, gap) end
-                pushId(index)
-                local clicked = imgui.InvisibleButton("##photo", V2(cellW, cellH))
-                hoverKey("##photo" .. index)
-                local min, max = imgui.GetItemRectMin(), imgui.GetItemRectMax()
-                local drawList = imgui.GetWindowDrawList()
-                local thumb = texture(photo)
-                if thumb then
-                    drawList:AddImage(thumb, min, max)
-                else
-                    drawList:AddRectFilled(min, max, U(0.12, 0.14, 0.19, 1), 6)
+        if photosView == "albums" then
+            header("Albums")
+            local favCount, favCover = 0, nil
+            for _, ph in ipairs(all) do
+                if favPhotos[ph.path] then
+                    favCount = favCount + 1
+                    favCover = favCover or ph
                 end
-                drawList:AddRect(min, max, index == selectedPhoto
-                    and U(0.38, 0.64, 1, 1) or U(1, 1, 1, 0.18), 6, 0, index == selectedPhoto and 2 or 1)
-                if clicked then selectedPhoto = index end
-                imgui.PopID()
             end
+
+            local y0 = imgui.GetCursorScreenPos()
+            imgui.SetWindowFontScale(1.12)
+            imgui.TextColored(K.white, "Album Saya")
+            imgui.SetWindowFontScale(1)
+            imgui.SetCursorScreenPos(V2(y0.x + avail - 68, y0.y))
+            if imgui.InvisibleButton("##photos_refresh", V2(68, 20)) then photoMedia.refresh() end
+            hoverKey("##photos_refresh")
+            dl:AddText(V2(y0.x + avail - 62, y0.y + 1), blue, "Segarkan")
+
+            local gap = 10
+            local cw = (avail - gap) / 2
+            local ch = cw * 0.92
+            local albums = {
+                { id = "recents", title = "Terbaru", count = #all, cover = all[1] },
+                { id = "favs", title = "Favorit", count = favCount, cover = favCover }
+            }
+            for i, al in ipairs(albums) do
+                if i > 1 then imgui.SameLine(0, gap) end
+                local clicked = imgui.InvisibleButton("##album_" .. al.id, V2(cw, ch + 38))
+                hoverKey("##album_" .. al.id)
+                local min = imgui.GetItemRectMin()
+                dl:AddRectFilled(min, V2(min.x + cw, min.y + ch), U(0.14, 0.15, 0.20, 1), 12)
+                local tex = al.cover and photoTexture(al.cover) or nil
+                if tex then
+                    drawPhoto(dl, tex, min.x, min.y, min.x + cw, min.y + ch, 12)
+                elseif al.id == "favs" then
+                    drawHeart(dl, min.x + cw / 2, min.y + ch / 2 - 4, 11, U(1, 1, 1, 0.30))
+                end
+                dl:AddText(V2(min.x + 2, min.y + ch + 6), U(1, 1, 1, 1), al.title)
+                dl:AddText(V2(min.x + 2, min.y + ch + 21), U(0.60, 0.60, 0.66, 1), tostring(al.count))
+                if clicked then
+                    photosFilter = al.id
+                    photosView = "grid"
+                    NS.navDir = 1
+                end
+            end
+
+            imgui.Dummy(V2(1, 4))
+            imgui.SetWindowFontScale(1.12)
+            imgui.TextColored(K.white, "Orang & Tempat")
+            imgui.SetWindowFontScale(1)
+            imgui.Spacing()
+            if #contacts == 0 then
+                imgui.TextColored(K.muted, "Buka aplikasi Kontak untuk memuat orang.")
+            else
+                local per = 4
+                local cellW = avail / per
+                for i = 1, math.min(per, #contacts) do
+                    local contact = contacts[i]
+                    if i > 1 then imgui.SameLine(0, 0) end
+                    pushId("people" .. i)
+                    local clicked = imgui.InvisibleButton("##person", V2(cellW, 74))
+                    hoverKey("##person" .. i)
+                    local min = imgui.GetItemRectMin()
+                    avatar(dl, min.x + cellW / 2, min.y + 26, 23, contact.name)
+                    local label = fitText(contact.name, cellW - 4)
+                    local ts = imgui.CalcTextSize(label)
+                    dl:AddText(V2(min.x + (cellW - ts.x) / 2, min.y + 54), U(1, 1, 1, 0.85), label)
+                    if clicked then openChat(contact.number) end
+                    imgui.PopID()
+                end
+            end
+
+        elseif photosView == "grid" then
+            header(photosFilter == "favs" and "Favorit" or "Terbaru")
+            imgui.TextColored(K.muted, #list .. " foto")
+            imgui.Spacing()
+            if #list == 0 then
+                imgui.TextColored(K.muted, photosFilter == "favs"
+                    and "Belum ada foto favorit." or "Album kosong. Ambil foto dari aplikasi Kamera.")
+            else
+                local columns, gap = 3, 4
+                local cellW = (avail - gap * (columns - 1)) / columns
+                for index, photo in ipairs(list) do
+                    if (index - 1) % columns ~= 0 then imgui.SameLine(0, gap) end
+                    pushId(index)
+                    local clicked = imgui.InvisibleButton("##photo", V2(cellW, cellW))
+                    hoverKey("##photo" .. index)
+                    local min = imgui.GetItemRectMin()
+                    local thumb = photoTexture(photo)
+                    if thumb then
+                        drawPhoto(dl, thumb, min.x, min.y, min.x + cellW, min.y + cellW, 6)
+                    else
+                        dl:AddRectFilled(min, V2(min.x + cellW, min.y + cellW), U(0.12, 0.14, 0.19, 1), 6)
+                    end
+                    if favPhotos[photo.path] then
+                        drawHeart(dl, min.x + cellW - 11, min.y + cellW - 11, 4.5, U(1, 1, 1, 0.95))
+                    end
+                    if clicked then
+                        selectedPhoto = index
+                        photosView = "viewer"
+                        NS.navDir = 1
+                    end
+                    imgui.PopID()
+                end
+            end
+
+        else
+            if #list == 0 then
+                photosView = "grid"
+                return
+            end
+            if selectedPhoto > #list then selectedPhoto = #list end
+            if selectedPhoto < 1 then selectedPhoto = 1 end
+            header(selectedPhoto .. " dari " .. #list)
+            local current = list[selectedPhoto]
+            local boxH = math.min(290, avail * 1.12)
+            local p = imgui.GetCursorScreenPos()
+            imgui.Dummy(V2(avail, boxH))
+            dl:AddRectFilled(p, V2(p.x + avail, p.y + boxH), U(0.04, 0.05, 0.07, 1), 14)
+            local tex = photoTexture(current)
+            if tex then drawPhoto(dl, tex, p.x, p.y, p.x + avail, p.y + boxH, 14) end
+            imgui.Dummy(V2(1, 6))
+
+            -- kontrol: sebelumnya | favorit | berikutnya
+            local cp = imgui.GetCursorScreenPos()
+            local cellW = avail / 3
+            local midY = cp.y + 22
+            imgui.SetCursorScreenPos(V2(cp.x, cp.y))
+            if imgui.InvisibleButton("##photo_prev", V2(cellW, 44)) and selectedPhoto > 1 then
+                selectedPhoto = selectedPhoto - 1
+            end
+            hoverKey("##photo_prev")
+            local pc = U(0.30, 0.62, 1, selectedPhoto > 1 and 1 or 0.3)
+            local pcx = cp.x + cellW / 2
+            dl:AddLine(V2(pcx + 4, midY - 8), V2(pcx - 3, midY), pc, 2.6)
+            dl:AddLine(V2(pcx - 3, midY), V2(pcx + 4, midY + 8), pc, 2.6)
+
+            imgui.SetCursorScreenPos(V2(cp.x + cellW, cp.y))
+            if imgui.InvisibleButton("##photo_fav", V2(cellW, 44)) then
+                favPhotos[current.path] = not favPhotos[current.path] or nil
+                uiSounds.play("tab")
+            end
+            hoverKey("##photo_fav")
+            local fav = favPhotos[current.path]
+            drawHeart(dl, cp.x + cellW * 1.5, midY - 2, 9,
+                fav and U(1, 0.23, 0.30, 1) or U(1, 1, 1, 0.45))
+
+            imgui.SetCursorScreenPos(V2(cp.x + cellW * 2, cp.y))
+            if imgui.InvisibleButton("##photo_next", V2(cellW, 44)) and selectedPhoto < #list then
+                selectedPhoto = selectedPhoto + 1
+            end
+            hoverKey("##photo_next")
+            local nc = U(0.30, 0.62, 1, selectedPhoto < #list and 1 or 0.3)
+            local ncx = cp.x + cellW * 2.5
+            dl:AddLine(V2(ncx - 4, midY - 8), V2(ncx + 3, midY), nc, 2.6)
+            dl:AddLine(V2(ncx + 3, midY), V2(ncx - 4, midY + 8), nc, 2.6)
         end
         status = photoMedia.status()
         drawStatus()
+    end
+
+    end
+
+    ------------------------------------------------------------------ MAPS (gaya Apple Maps)
+    -- Gambar peta (opsional, PNG) dicari di <moonloader>\resource\PBRP_phone\ :
+    --   map_satellite.png  map_atlas.png  map_road.png  map_street.png
+    -- Gambar dianggap menutupi dunia SA dari X/Y -3000..3000. Tanpa file, dipakai peta polos.
+    do
+    local MAPS = {
+        { id = "satellite", label = "Satelit", file = "map_satellite.png", land = { 0.17, 0.21, 0.14 }, water = { 0.05, 0.09, 0.14 } },
+        { id = "atlas", label = "Atlas", file = "map_atlas.png", land = { 0.73, 0.86, 0.55 }, water = { 0.38, 0.74, 0.90 } },
+        { id = "road", label = "Peta Jalan", file = "map_road.png", land = { 0.92, 0.92, 0.90 }, water = { 0.70, 0.82, 0.92 } },
+        { id = "street", label = "Jalan", file = "map_street.png", land = { 0.17, 0.17, 0.20 }, water = { 0.07, 0.08, 0.12 } }
+    }
+    local function mapTexture(style)
+        local m = MAPS[style]
+        local cached = MAP.tex[m.id]
+        if cached then return cached end
+        if cached == false and os.clock() - (MAP.texAt[m.id] or 0) < 5 then return nil end
+        MAP.texAt[m.id] = os.clock()
+        local path = SOUND_DIR .. m.file
+        if type(doesFileExist) == "function" and not doesFileExist(path) then
+            MAP.tex[m.id] = false
+            return nil
+        end
+        local ok, tex = pcall(imgui.CreateTextureFromFile, path)
+        MAP.tex[m.id] = (ok and tex) or false
+        return MAP.tex[m.id] or nil
+    end
+
+    local function playerPos()
+        local ok, x, y = pcall(getCharCoordinates, PLAYER_PED)
+        if not ok or not x then return nil end
+        local heading = 0
+        pcall(function() heading = getCharHeading(PLAYER_PED) end)
+        return x, y, heading
+    end
+
+    local function carInfo()
+        local ok, inCar = pcall(isCharInAnyCar, PLAYER_PED)
+        if not ok or not inCar then return nil end
+        local ok2, car = pcall(storeCarCharIsInNoSave, PLAYER_PED)
+        if not ok2 or not car then return nil end
+        local speed, hp = 0, 0
+        pcall(function() speed = getCarSpeed(car) * 3.6 end)
+        pcall(function() hp = getCarHealth(car) end)
+        return math.floor(speed + 0.5), math.max(0, math.min(100, math.floor(hp / 10 + 0.5)))
+    end
+
+    pages.maps = function()
+        local win = imgui.GetWindowSize()
+        local wp = imgui.GetWindowPos()
+        local dl = imgui.GetWindowDrawList()
+        local vx0, vy0, vx1, vy1 = wp.x, wp.y, wp.x + win.x, wp.y + win.y
+        local px, py, heading = playerPos()
+        if MAP.follow and px then MAP.x, MAP.y = px, py end
+        local cx, cy = (vx0 + vx1) / 2, (vy0 + vy1) / 2
+        local sc = MAP.scale
+        local function toScreen(wx, wy) return cx + (wx - MAP.x) * sc, cy - (wy - MAP.y) * sc end
+
+        -- sentuhan peta: geser, zoom (scroll), ketuk = tujuan
+        imgui.SetCursorScreenPos(V2(vx0, vy0))
+        imgui.InvisibleButton("##map_touch", V2(win.x, win.y))
+        local hovered = imgui.IsItemHovered()
+        if imgui.IsItemClicked(0) then MAP.drag = 0 end
+        if imgui.IsItemActive() then
+            local dm = imgui.GetIO().MouseDelta
+            if dm.x ~= 0 or dm.y ~= 0 then
+                MAP.drag = MAP.drag + math.abs(dm.x) + math.abs(dm.y)
+                if MAP.drag > 4 then
+                    MAP.follow = false
+                    MAP.x = MAP.x - dm.x / sc
+                    MAP.y = MAP.y + dm.y / sc
+                end
+            end
+        end
+        local wheel = imgui.GetIO().MouseWheel
+        if hovered and wheel ~= 0 then
+            MAP.scale = math.max(0.04, math.min(1.4, MAP.scale * (wheel > 0 and 1.15 or 0.87)))
+            sc = MAP.scale
+        end
+        if hovered and imgui.IsMouseReleased(0) and MAP.drag <= 4 then
+            local mp = imgui.GetMousePos()
+            MAP.wp = { x = MAP.x + (mp.x - cx) / sc, y = MAP.y - (mp.y - cy) / sc }
+            pcall(placeWaypoint, MAP.wp.x, MAP.wp.y, 0)
+        end
+
+        -- gambar peta
+        local style = MAPS[MAP.style]
+        local w = style.water
+        dl:AddRectFilled(V2(vx0, vy0), V2(vx1, vy1), U(w[1], w[2], w[3], 1), 0)
+        local tex = mapTexture(MAP.style)
+        local ax, ay = toScreen(-3000, 3000)
+        local bx, by = toScreen(3000, -3000)
+        if tex then
+            dl:AddImage(tex, V2(ax, ay), V2(bx, by))
+        else
+            local l = style.land
+            dl:AddRectFilled(V2(ax, ay), V2(bx, by), U(l[1], l[2], l[3], 1), 0)
+            local light = (l[1] * 0.3 + l[2] * 0.6 + l[3] * 0.1) > 0.5
+            local dotCol = light and U(0, 0, 0, 0.12) or U(1, 1, 1, 0.14)
+            for gx = -3000, 3000, 500 do
+                for gy = -3000, 3000, 500 do
+                    local sx, sy = toScreen(gx, gy)
+                    if sx > vx0 and sx < vx1 and sy > vy0 and sy < vy1 then
+                        dl:AddCircleFilled(V2(sx, sy), 1.6, dotCol, 6)
+                    end
+                end
+            end
+        end
+
+        -- tujuan
+        if MAP.wp then
+            local mx, my = toScreen(MAP.wp.x, MAP.wp.y)
+            dl:AddTriangleFilled(V2(mx - 5, my - 9), V2(mx + 5, my - 9), V2(mx, my), U(1, 0.23, 0.36, 1))
+            dl:AddCircleFilled(V2(mx, my - 14), 7, U(1, 0.23, 0.36, 1), 18)
+            dl:AddCircleFilled(V2(mx, my - 14), 2.6, U(1, 1, 1, 1), 10)
+        end
+        -- pemain
+        if px then
+            local mx, my = toScreen(px, py)
+            local a = math.rad(-(heading or 0))
+            local dx, dy = math.sin(a), -math.cos(a)
+            local nx, ny = -dy, dx
+            dl:AddCircleFilled(V2(mx, my), 11, U(0.04, 0.52, 1, 0.22), 24)
+            dl:AddTriangleFilled(V2(mx + dx * 19, my + dy * 19), V2(mx + dx * 9 + nx * 5.5, my + dy * 9 + ny * 5.5),
+                V2(mx + dx * 9 - nx * 5.5, my + dy * 9 - ny * 5.5), U(0.04, 0.52, 1, 1))
+            dl:AddCircleFilled(V2(mx, my), 6.5, U(1, 1, 1, 1), 20)
+            dl:AddCircleFilled(V2(mx, my), 4.6, U(0.04, 0.52, 1, 1), 20)
+        end
+
+        -- sheet "Pilih Peta"
+        local sheetH = MAP.sheet and 112 or 36
+        local sheetTop = vy1 - sheetH
+
+        -- chip info di atas sheet
+        local chipY = sheetTop - 28
+        local function chip(text, onClickId)
+            local ts = imgui.CalcTextSize(text)
+            local cw = ts.x * 0.85 + 22
+            local clicked = false
+            if onClickId then
+                imgui.SetCursorScreenPos(V2(vx0 + 8, chipY))
+                clicked = imgui.InvisibleButton(onClickId, V2(cw, 22))
+                hoverKey(onClickId)
+            end
+            dl:AddRectFilled(V2(vx0 + 8, chipY), V2(vx0 + 8 + cw, chipY + 22), U(0.08, 0.08, 0.12, 0.82), 11)
+            dlText(dl, text, vx0 + 19, chipY + 5, U(1, 1, 1, 0.95), 0.85)
+            chipY = chipY - 28
+            return clicked
+        end
+        if MAP.wp and px then
+            local dist = math.sqrt((MAP.wp.x - px) ^ 2 + (MAP.wp.y - py) ^ 2)
+            local text = dist >= 1000 and string.format("Tujuan %.1f km  (ketuk: hapus)", dist / 1000)
+                or string.format("Tujuan %d m  (ketuk: hapus)", math.floor(dist))
+            if chip(text, "##map_wp_clear") then
+                MAP.wp = nil
+                pcall(removeWaypoint)
+            end
+        end
+        if MAP.showCar then
+            local speed, hp = carInfo()
+            chip(speed and string.format("%d km/j   Kondisi %d%%", speed, hp) or "Tidak sedang di kendaraan", nil)
+        end
+        if not tex and not MAP.showVeh then
+            local msg = fitText("Peta polos - taruh map_*.png di resource\\PBRP_phone", (win.x - 70) / 0.72)
+            dl:AddRectFilled(V2(vx0 + 8, vy0 + 8), V2(vx1 - 50, vy0 + 28), U(0.08, 0.08, 0.12, 0.70), 10)
+            dlText(dl, msg, vx0 + 15, vy0 + 12, U(1, 1, 1, 0.80), 0.72)
+        end
+
+        -- sheet
+        imgui.SetCursorScreenPos(V2(vx0, sheetTop))
+        imgui.InvisibleButton("##map_sheet_bg", V2(win.x, sheetH))
+        dl:AddRectFilled(V2(vx0, sheetTop), V2(vx1, vy1 + 26), U(0.09, 0.09, 0.12, 0.96), 18)
+        dl:AddText(V2(vx0 + 14, sheetTop + 9), U(1, 1, 1, 1), "Pilih Peta")
+        imgui.SetCursorScreenPos(V2(vx1 - 48, sheetTop + 2))
+        if imgui.InvisibleButton("##map_sheet_toggle", V2(40, 30)) then MAP.sheet = not MAP.sheet end
+        hoverKey("##map_sheet_toggle")
+        do
+            local ccx, ccy = vx1 - 28, sheetTop + 17
+            local cc = U(1, 1, 1, 0.75)
+            local dir = MAP.sheet and 1 or -1
+            dl:AddLine(V2(ccx - 5, ccy - 2 * dir), V2(ccx, ccy + 3 * dir), cc, 2)
+            dl:AddLine(V2(ccx, ccy + 3 * dir), V2(ccx + 5, ccy - 2 * dir), cc, 2)
+        end
+        if MAP.sheet then
+            local gap = 6
+            local tw = (win.x - 24 - gap * 3) / 4
+            local th = 44
+            for i, m in ipairs(MAPS) do
+                local tx = vx0 + 12 + (i - 1) * (tw + gap)
+                local ty = sheetTop + 36
+                imgui.SetCursorScreenPos(V2(tx, ty))
+                if imgui.InvisibleButton("##map_style" .. i, V2(tw, th + 20)) then
+                    MAP.style = i
+                    uiSounds.play("tab")
+                end
+                hoverKey("##map_style" .. i)
+                local sel = MAP.style == i
+                local alpha = sel and 1 or 0.62
+                local mtex = mapTexture(i)
+                dl:AddRectFilled(V2(tx, ty), V2(tx + tw, ty + th), U(m.water[1], m.water[2], m.water[3], alpha), 8)
+                if mtex then
+                    drawPhoto(dl, mtex, tx, ty, tx + tw, ty + th, 8)
+                else
+                    dl:AddRectFilled(V2(tx + 7, ty + 6), V2(tx + tw - 5, ty + th - 6),
+                        U(m.land[1], m.land[2], m.land[3], alpha), 6)
+                end
+                if sel then
+                    dl:AddCircleFilled(V2(tx + tw - 8, ty + 8), 6, U(0.04, 0.52, 1, 1), 14)
+                    dl:AddLine(V2(tx + tw - 11, ty + 8), V2(tx + tw - 8.5, ty + 10.5), U(1, 1, 1, 1), 1.6)
+                    dl:AddLine(V2(tx + tw - 8.5, ty + 10.5), V2(tx + tw - 5, ty + 5.5), U(1, 1, 1, 1), 1.6)
+                end
+                dlTextC(dl, fitText(m.label, tw / 0.8), tx + tw / 2, ty + th + 3, U(1, 1, 1, sel and 1 or 0.7), 0.8)
+            end
+        end
+
+        -- panel tombol kanan: kendaraan, lokasi, info kendaraan, suhu
+        local panelX, panelY = vx1 - 40, vy0 + 8
+        imgui.SetCursorScreenPos(V2(panelX, panelY))
+        imgui.InvisibleButton("##map_panel_bg", V2(32, 96))
+        dl:AddRectFilled(V2(panelX, panelY), V2(panelX + 32, panelY + 96), U(0.09, 0.09, 0.12, 0.88), 10)
+        local dark = U(0.09, 0.09, 0.12, 1)
+        -- kendaraan
+        imgui.SetCursorScreenPos(V2(panelX, panelY))
+        if imgui.InvisibleButton("##map_btn_veh", V2(32, 32)) then
+            MAP.showVeh = not MAP.showVeh
+            if MAP.showVeh and #vehicles == 0 then sendChat("/rpui_phone_info") end
+        end
+        hoverKey("##map_btn_veh")
+        icons.draw(dl, "vehicle", panelX + 7, panelY + 7, 18,
+            MAP.showVeh and U(0.30, 0.62, 1, 1) or U(1, 1, 1, 0.92), dark)
+        -- lokasi saya
+        imgui.SetCursorScreenPos(V2(panelX, panelY + 32))
+        if imgui.InvisibleButton("##map_btn_loc", V2(32, 32)) then
+            MAP.follow = true
+            MAP.scale = math.max(MAP.scale, 0.30)
+        end
+        hoverKey("##map_btn_loc")
+        local lc = MAP.follow and U(0.30, 0.62, 1, 1) or U(1, 1, 1, 0.92)
+        dl:AddTriangleFilled(V2(panelX + 22, panelY + 41), V2(panelX + 12, panelY + 54),
+            V2(panelX + 17.5, panelY + 54), lc)
+        dl:AddTriangleFilled(V2(panelX + 22, panelY + 41), V2(panelX + 10, panelY + 49),
+            V2(panelX + 10, panelY + 55), lc)
+        -- info kendaraan (kecepatan & kondisi)
+        imgui.SetCursorScreenPos(V2(panelX, panelY + 64))
+        if imgui.InvisibleButton("##map_btn_car", V2(32, 32)) then MAP.showCar = not MAP.showCar end
+        hoverKey("##map_btn_car")
+        local pc = MAP.showCar and U(0.30, 0.62, 1, 1) or U(1, 1, 1, 0.92)
+        dl:AddRectFilled(V2(panelX + 9, panelY + 72), V2(panelX + 19, panelY + 89), pc, 2)
+        dl:AddRectFilled(V2(panelX + 11, panelY + 74), V2(panelX + 17, panelY + 79), dark, 1)
+        dl:AddLine(V2(panelX + 19, panelY + 76), V2(panelX + 23, panelY + 78), pc, 1.8)
+        dl:AddLine(V2(panelX + 23, panelY + 78), V2(panelX + 23, panelY + 85), pc, 1.8)
+        -- suhu
+        local _, base = WX.info()
+        local tm = os.date("*t")
+        local tempText = tostring(WX.tempAt(tm.hour + tm.min / 60, base))
+        dl:AddRectFilled(V2(panelX, panelY + 102), V2(panelX + 32, panelY + 126), U(0.09, 0.09, 0.12, 0.88), 10)
+        local tts = dlTextC(dl, tempText, panelX + 14, panelY + 108, U(1, 1, 1, 1), 0.9)
+        WX.degree(dl, panelX + 14 + tts.x * 0.45 + 5, panelY + 112, 2.4, U(1, 1, 1, 1))
+
+        -- daftar kendaraan
+        if MAP.showVeh then
+            local cardW = win.x - 56
+            local rows = math.min(5, math.max(1, #vehicles))
+            local cardH = 30 + rows * 24 + 6
+            imgui.SetCursorScreenPos(V2(vx0 + 8, vy0 + 8))
+            if imgui.InvisibleButton("##map_veh_card", V2(cardW, cardH)) then MAP.showVeh = false end
+            dl:AddRectFilled(V2(vx0 + 8, vy0 + 8), V2(vx0 + 8 + cardW, vy0 + 8 + cardH), U(0.09, 0.09, 0.12, 0.94), 14)
+            dl:AddText(V2(vx0 + 20, vy0 + 15), U(1, 1, 1, 1), "Kendaraan Saya")
+            if #vehicles == 0 then
+                dl:AddText(V2(vx0 + 20, vy0 + 40), U(0.60, 0.60, 0.66, 1), "Belum ada data kendaraan.")
+            end
+            for i = 1, rows do
+                local v = vehicles[i]
+                if v then
+                    local ry = vy0 + 38 + (i - 1) * 24
+                    dl:AddText(V2(vx0 + 20, ry), U(1, 1, 1, 0.95), fitText(v.plate, cardW * 0.42))
+                    local st = fitText(v.status, cardW * 0.45)
+                    local ss = imgui.CalcTextSize(st)
+                    dl:AddText(V2(vx0 + 8 + cardW - ss.x - 12, ry), U(0.60, 0.65, 0.75, 1), st)
+                end
+            end
+        end
+        status = ""
+    end
+
+    end
+
+    ------------------------------------------------------------------ KALKULATOR (gaya iPhone)
+    do
+    local CALC = { disp = "0", acc = nil, op = nil, fresh = true }
+    local function calcFormat(v)
+        if v ~= v or math.abs(v) == math.huge then return "Error" end
+        return string.format("%.9g", v)
+    end
+    local function calcApply(a, b, op)
+        if op == "+" then return a + b
+        elseif op == "-" then return a - b
+        elseif op == "x" then return a * b end
+        if b == 0 then return 0 / 0 end
+        return a / b
+    end
+    local function calcPress(k)
+        if k == "AC" then
+            CALC.disp, CALC.acc, CALC.op, CALC.fresh = "0", nil, nil, true
+        elseif k:match("^%d$") then
+            if CALC.fresh or CALC.disp == "0" or CALC.disp == "Error" then
+                CALC.disp = k
+            elseif #CALC.disp < 12 then
+                CALC.disp = CALC.disp .. k
+            end
+            CALC.fresh = false
+        elseif k == "." then
+            if CALC.fresh or CALC.disp == "Error" then
+                CALC.disp = "0."
+                CALC.fresh = false
+            elseif not CALC.disp:find("%.") then
+                CALC.disp = CALC.disp .. "."
+            end
+        elseif k == "+/-" then
+            if CALC.disp ~= "0" and CALC.disp ~= "Error" then
+                CALC.disp = CALC.disp:sub(1, 1) == "-" and CALC.disp:sub(2) or ("-" .. CALC.disp)
+            end
+        elseif k == "%" then
+            local v = tonumber(CALC.disp)
+            if v then
+                CALC.disp = calcFormat(v / 100)
+                CALC.fresh = true
+            end
+        else
+            local v = tonumber(CALC.disp) or 0
+            if CALC.op and CALC.acc ~= nil and not CALC.fresh then
+                v = calcApply(CALC.acc, v, CALC.op)
+                CALC.disp = calcFormat(v)
+            end
+            if k == "=" then
+                CALC.acc, CALC.op = nil, nil
+            else
+                CALC.acc, CALC.op = v, k
+            end
+            CALC.fresh = true
+        end
+    end
+
+    pages.calc = function()
+        local win = imgui.GetWindowSize()
+        local wp = imgui.GetWindowPos()
+        local avail = imgui.GetContentRegionAvail().x
+        local dl = imgui.GetWindowDrawList()
+        local gap = 8
+        local d = (avail - gap * 3) / 4
+        local left = wp.x + 14
+        local top = win.y - (d + gap) * 5 - 4
+        local rows = {
+            { "AC", "+/-", "%", "/" }, { "7", "8", "9", "x" }, { "4", "5", "6", "-" },
+            { "1", "2", "3", "+" }, { "0", ".", "=" }
+        }
+
+        -- layar hasil
+        local text = CALC.disp
+        local scale = 3.0
+        imgui.SetWindowFontScale(scale)
+        local ts = imgui.CalcTextSize(text)
+        while ts.x > avail and scale > 1.2 do
+            scale = scale - 0.2
+            imgui.SetWindowFontScale(scale)
+            ts = imgui.CalcTextSize(text)
+        end
+        imgui.SetWindowFontScale(1)
+        dlText(dl, text, left + avail - ts.x, wp.y + top - ts.y - 10, U(1, 1, 1, 1), scale)
+
+        for r, row in ipairs(rows) do
+            for c, key in ipairs(row) do
+                local wide = key == "0"
+                local kw = wide and (d * 2 + gap) or d
+                local kx = left + (c - 1) * (d + gap)
+                if r == 5 and c > 1 then kx = left + (c - 1) * (d + gap) + (d + gap) end
+                local ky = wp.y + top + (r - 1) * (d + gap)
+                imgui.SetCursorScreenPos(V2(kx, ky))
+                if imgui.InvisibleButton("##calc_" .. r .. "_" .. c, V2(kw, d)) then
+                    calcPress(key)
+                    uiSounds.play("type")
+                end
+                hoverKey("##calc_" .. r .. "_" .. c)
+                local active = imgui.IsItemActive()
+                local isOp = key == "/" or key == "x" or key == "-" or key == "+" or key == "="
+                local topRow = r == 1 and c <= 3
+                local selectedOp = isOp and key ~= "=" and CALC.op == key and CALC.fresh
+                local fill, txt
+                if selectedOp then
+                    fill, txt = U(1, 1, 1, 1), U(1, 0.62, 0.04, 1)
+                elseif isOp then
+                    fill, txt = U(1, 0.62, 0.04, active and 0.75 or 1), U(1, 1, 1, 1)
+                elseif topRow then
+                    fill, txt = U(0.65, 0.65, 0.68, active and 0.75 or 1), U(0.05, 0.05, 0.07, 1)
+                else
+                    fill, txt = U(0.20, 0.20, 0.23, 1), U(1, 1, 1, 1)
+                    if active then fill = U(0.34, 0.34, 0.38, 1) end
+                end
+                if wide then
+                    dl:AddRectFilled(V2(kx, ky), V2(kx + kw, ky + d), fill, d / 2)
+                else
+                    dl:AddCircleFilled(V2(kx + d / 2, ky + d / 2), d / 2, fill, 40)
+                end
+                imgui.SetWindowFontScale(1.45)
+                local ks = imgui.CalcTextSize(key)
+                imgui.SetWindowFontScale(1)
+                local tx = wide and (kx + d / 2 - ks.x / 2 + 6) or (kx + d / 2 - ks.x / 2)
+                dlText(dl, key, tx, ky + d / 2 - ks.y / 2, txt, 1.45)
+            end
+        end
+    end
     end
 
     local function money(value)
@@ -2390,7 +3160,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             imgui.Dummy(V2(avail, 78))
             local dl = imgui.GetWindowDrawList()
             dl:AddRectFilled(p, V2(p.x + avail, p.y + 78), UV(K.glass), 18)
-            dl:AddRect(p, V2(p.x + avail, p.y + 78), U(1, 1, 1, 0.07), 18, 0, 1)
             local who = "Warga #" .. tostring(phoneInfo.playerId)
             avatar(dl, p.x + 40, p.y + 39, 26, who)
             dl:AddText(V2(p.x + 76, p.y + 20), U(0.97, 0.97, 1, 1), who)
@@ -2429,7 +3198,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
                 U(ar * 0.95 + 0.04, ag * 0.95 + 0.04, ab * 0.95 + 0.04, 1), U(ar * 0.28, ag * 0.28, ab * 0.28, 1))
             dl:AddCircleFilled(V2(p.x + avail * 0.70, p.y + h * 0.52), h * 0.36, U(1, 1, 1, 0.10), 48)
             dl:AddCircleFilled(V2(p.x + avail * 0.80, p.y + h * 0.52), h * 0.36, U(1, 1, 1, 0.07), 48)
-            dl:AddRect(p, V2(p.x + avail, p.y + h), U(1, 1, 1, 0.20), 20, 0, 1)
             dlText(dl, "PB BANK", p.x + 18, p.y + 14, U(1, 1, 1, 0.92), 1.05)
             -- chip
             dl:AddRectFilled(V2(p.x + 18, p.y + 46), V2(p.x + 56, p.y + 72), U(0.93, 0.78, 0.38, 1), 6)
@@ -2476,7 +3244,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         imgui.Dummy(V2(avail, 150))
         local dl = imgui.GetWindowDrawList()
         dl:AddRectFilled(p, V2(p.x + avail, p.y + 150), UV(K.glass), 20)
-        dl:AddRect(p, V2(p.x + avail, p.y + 150), U(1, 1, 1, 0.07), 20, 0, 1)
         local cx, cy = p.x + avail / 2, p.y + 66
         if taxiOrderPending then
             for i = 0, 2 do
@@ -2527,11 +3294,9 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
                 gradientRounded(dl, min.x, min.y, cw, 74, 16,
                     U(math.min(1, c[1] * 1.15), math.min(1, c[2] * 1.15), math.min(1, c[3] * 1.15), 1),
                     U(c[1] * 0.68, c[2] * 0.68, c[3] * 0.68, 1))
-                dl:AddRect(min, V2(min.x + cw, min.y + 74), U(1, 1, 1, 0.45), 16, 0, 1.5)
             else
                 dl:AddRectFilled(min, V2(min.x + cw, min.y + 74),
                     U(1, 1, 1, imgui.IsItemHovered() and 0.14 or 0.09), 16)
-                dl:AddRect(min, V2(min.x + cw, min.y + 74), U(1, 1, 1, 0.08), 16, 0, 1)
             end
             icons.draw(dl, svc.icon, min.x + cw / 2 - 11, min.y + 13, 22, U(1, 1, 1, 1),
                 sel and U(c[1], c[2], c[3], 1) or U(0.18, 0.18, 0.21, 1))
@@ -2705,7 +3470,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
                 avatar(dl, min.x + 26, min.y + 28, 20, group.name)
                 dl:AddText(V2(min.x + 56, min.y + 10), U(0.97, 0.97, 1, 1), fitText(group.name, avail - 70))
                 dl:AddText(V2(min.x + 56, min.y + 30), U(0.60, 0.60, 0.66, 1), "Grup #" .. group.id)
-                dl:AddLine(V2(min.x + 56, min.y + 55), V2(min.x + avail, min.y + 55), U(1, 1, 1, 0.06), 1)
                 if clicked then
                     sendChat("/rpui_group_open " .. group.id)
                     status = "Membuka grup..."
@@ -2719,7 +3483,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
 
     pages.settings = function()
         header("Pengaturan")
-        beginCard("##phone_settings_sound", 352, K.glass)
+        beginCard("##phone_settings_sound", 376, K.glass)
         imgui.TextColored(K.muted, "SUARA & NOTIFIKASI")
         imgui.Spacing()
         if toggleRow("Suara tombol", soundEnabled, "##tg_sound") then
@@ -2768,7 +3532,9 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         if imgui.SliderFloat("##phone_sound_volume", soundVolume, 0, 1, "%.2f") then
             uiSounds.setVolume(soundVolume[0])
         end
-        imgui.TextColored(K.muted, "Suara panggilan memakai voice server; chat tersedia saat panggilan aktif.")
+        imgui.PushStyleColor(imgui.Col.Text, K.muted)
+        imgui.TextWrapped("Suara panggilan memakai voice server; chat tersedia saat panggilan aktif.")
+        imgui.PopStyleColor()
         endCard()
         imgui.Spacing()
         if pillButton("TES NOTIFIKASI##phone_test_notif", -1, 38, "primary") then
@@ -3032,7 +3798,6 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
         local clicked = imgui.InvisibleButton("##banner_btn", V2(w, h))
         hoverKey("##banner_btn")
         dl:AddRectFilled(V2(p.x, p.y + 2), V2(p.x + w, p.y + h - 2), U(0.09, 0.09, 0.12, 0.97), 22)
-        dl:AddRect(V2(p.x, p.y + 2), V2(p.x + w, p.y + h - 2), U(1, 1, 1, imgui.IsItemHovered() and 0.34 or 0.20), 22, 0, 1)
         miniSquircle(dl, p.x + 12, p.y + 15, 38, notifApp(b.kind))
         local ago = agoText(b.stamp)
         local as = imgui.CalcTextSize(ago)
@@ -3057,6 +3822,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             pcall(function() self.HideCursor = not open end)
             self.LockPlayer = open
             updateAccentPalette()
+            texBudget = 2
             local now = os.clock()
             local dt = math.min(0.05, now - (A.last > 0 and A.last or now))
             A.last = now
@@ -3082,8 +3848,8 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             end
 
             local display = imgui.GetIO().DisplaySize
-            local W = math.max(250, math.min(352, display.x - 24))
-            local H = math.max(380, math.min(716, display.y - 24))
+            local H = math.max(380, math.min(596, display.y - 24))
+            local W = math.max(250, math.min(math.floor(H * 0.49), display.x - 24))
 
             -- posisi HP dengan pegas: tersembunyi -> mengintip -> penuh
             local fullY = (display.y - H) / 2
@@ -3129,43 +3895,43 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
 
             local dl = imgui.GetWindowDrawList()
             local pos = imgui.GetWindowPos()
-            local edge = 4
+            local edge = 3
             local bx0 = pos.x + edge
             local bw = W - edge * 2
-            local sx, sy = bx0 + 9, pos.y + 9
-            local sw, sh = bw - 18, H - 18
+            local bez = 7
+            local sx, sy = bx0 + bez, pos.y + bez
+            local sw, sh = bw - bez * 2, H - bez * 2
+            local SR = 36
 
             -- tombol samping (action, volume, power)
-            local metal = U(0.38, 0.40, 0.46, 1)
-            dl:AddRectFilled(V2(pos.x + 1, pos.y + 112), V2(pos.x + edge + 2, pos.y + 140), metal, 2)
-            dl:AddRectFilled(V2(pos.x + 1, pos.y + 168), V2(pos.x + edge + 2, pos.y + 212), metal, 2)
-            dl:AddRectFilled(V2(pos.x + 1, pos.y + 222), V2(pos.x + edge + 2, pos.y + 266), metal, 2)
-            imgui.SetCursorScreenPos(V2(pos.x + W - 12, pos.y + 168))
-            if imgui.InvisibleButton("##phone_power", V2(12, 72)) then close() end
+            local metal = U(0.24, 0.25, 0.29, 1)
+            dl:AddRectFilled(V2(pos.x + 1, pos.y + 96), V2(pos.x + edge + 2, pos.y + 118), metal, 2)
+            dl:AddRectFilled(V2(pos.x + 1, pos.y + 138), V2(pos.x + edge + 2, pos.y + 176), metal, 2)
+            dl:AddRectFilled(V2(pos.x + 1, pos.y + 186), V2(pos.x + edge + 2, pos.y + 224), metal, 2)
+            imgui.SetCursorScreenPos(V2(pos.x + W - 12, pos.y + 140))
+            if imgui.InvisibleButton("##phone_power", V2(12, 64)) then close() end
             hoverKey("##phone_power")
-            dl:AddRectFilled(V2(pos.x + W - edge - 2, pos.y + 172), V2(pos.x + W - 1, pos.y + 238),
-                imgui.IsItemHovered() and U(0.60, 0.62, 0.70, 1) or metal, 2)
+            dl:AddRectFilled(V2(pos.x + W - edge - 2, pos.y + 144), V2(pos.x + W - 1, pos.y + 200),
+                imgui.IsItemHovered() and U(0.45, 0.47, 0.54, 1) or metal, 2)
 
-            -- bodi titanium (gradasi) + kilau tepi + bezel hitam
-            gradientRounded(dl, bx0, pos.y, bw, H, 48, U(0.58, 0.59, 0.65, 1), U(0.30, 0.31, 0.36, 1))
-            dl:AddRectFilled(V2(bx0 + 2.5, pos.y + 2.5), V2(bx0 + bw - 2.5, pos.y + H - 2.5), U(0.015, 0.015, 0.02, 1), 45.5)
-            dl:AddRect(V2(bx0, pos.y), V2(bx0 + bw, pos.y + H), U(1, 1, 1, 0.30), 48, 0, 1.2)
-            dl:AddRect(V2(bx0 + 3, pos.y + 3), V2(bx0 + bw - 3, pos.y + H - 3), U(1, 1, 1, 0.06), 45, 0, 1)
+            -- bodi: rangka graphite + bezel hitam tipis (tanpa garis tepi)
+            gradientRounded(dl, bx0, pos.y, bw, H, 46, U(0.30, 0.31, 0.36, 1), U(0.14, 0.14, 0.17, 1))
+            dl:AddRectFilled(V2(bx0 + 2, pos.y + 2), V2(bx0 + bw - 2, pos.y + H - 2), U(0.012, 0.012, 0.016, 1), 44)
 
             -- layar: wallpaper dengan crossfade antar halaman, tema warna mengikuti aplikasi
             local enter = ease((now - math.max(A.pageAt, openedAt)) / 0.40)
             local bright = isBright(renderPage)
             local tintApp = appById[renderPage] and appById[renderPage].color or nil
             if isBright(A.prevPage) ~= bright and enter < 1 then
-                drawWallpaper(dl, sx, sy, sw, sh, 38, not bright, tintApp)
+                drawWallpaper(dl, sx, sy, sw, sh, SR, not bright, tintApp)
                 A.gA = enter
-                drawWallpaper(dl, sx, sy, sw, sh, 38, bright, tintApp)
+                drawWallpaper(dl, sx, sy, sw, sh, SR, bright, tintApp)
                 A.gA = 1
             else
-                drawWallpaper(dl, sx, sy, sw, sh, 38, bright, tintApp)
+                drawWallpaper(dl, sx, sy, sw, sh, SR, bright, tintApp)
             end
             -- cincin bezel menutup sudut layar agar rapi
-            dl:AddRect(V2(sx - 5, sy - 5), V2(sx + sw + 5, sy + sh + 5), U(0.015, 0.015, 0.02, 1), 43, 0, 10)
+            dl:AddRect(V2(sx - 2.5, sy - 2.5), V2(sx + sw + 2.5, sy + sh + 2.5), U(0.012, 0.012, 0.016, 1), SR + 2.5, 0, 5)
             drawStatusBar(dl, sx, sy, sw, dt)
 
             -- konten dengan transisi: dorong kanan/kiri antar sub-halaman, naik dari beranda
@@ -3180,7 +3946,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
                 end
             end
             A.gA = contentA
-            imgui.SetCursorScreenPos(V2(sx + ox, sy + 48 + oy))
+            imgui.SetCursorScreenPos(V2(sx + ox, sy + 44 + oy))
             imgui.PushStyleVarFloat(imgui.StyleVar.Alpha, math.max(0.01, contentA))
             imgui.PushStyleVarFloat(imgui.StyleVar.ScrollbarSize, 3)
             imgui.PushStyleColor(imgui.Col.ScrollbarBg, K.clear)
@@ -3188,7 +3954,7 @@ return function(imgui, icons, V2, ffi, photoMedia, sendChat, uiSounds, isPlayerU
             imgui.PushStyleColor(imgui.Col.ChildBg, K.clear)
             imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, V2(14, 4))
             imgui.PushStyleVarFloat(imgui.StyleVar.ChildRounding, 0)
-            imgui.BeginChild("##phone_content", V2(sw, sh - 48 - 30), false, padFlag)
+            imgui.BeginChild("##phone_content", V2(sw, sh - 44 - 30), false, padFlag)
             imgui.PopStyleVar(2)
             if renderPage ~= "camera" then cameraCaptureAt = nil end
             local render = pages[renderPage] or pages.home
